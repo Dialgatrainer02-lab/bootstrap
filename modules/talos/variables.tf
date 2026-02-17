@@ -25,11 +25,17 @@ variable "talos_dns_servers" {
 }
 
 variable "pool_id" {
-  type = string
+  type     = string
   nullable = true
-  default = null
+  default  = null
 }
 
 variable "node_name" {
   type = string
+}
+
+variable "tags" {
+  description = "additional tags to apply to the talos vm; 'terraform' is always included"
+  type        = list(string)
+  default     = []
 }

@@ -42,7 +42,7 @@ resource "proxmox_virtual_environment_vm" "base_template" {
   node_name   = var.node_name
   name        = "base-template"
   description = "Managed by Terraform"
-  tags        = ["terraform", "base"]
+  tags        = concat(["terraform"], var.tags)
   template    = true
   pool_id     = var.pool_id
 

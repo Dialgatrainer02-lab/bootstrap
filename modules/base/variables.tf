@@ -46,3 +46,9 @@ variable "user_data" {
   description = "raw cloud-init user-data content"
   type        = string
 }
+
+variable "tags" {
+  description = "additional tags to apply to the base template; 'terraform' is always included"
+  type        = list(string)
+  default     = []
+}

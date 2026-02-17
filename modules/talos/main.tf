@@ -34,8 +34,8 @@ resource "proxmox_virtual_environment_vm" "management_cluster" {
   node_name   = var.node_name
   name        = "management-cluster"
   description = "Managed by Terraform"
-  tags        = ["terraform", "talos", "kubernetes"]
-  pool_id = var.pool_id
+  tags        = concat(["terraform"], var.tags)
+  pool_id     = var.pool_id
 
   machine = "q35"
   bios    = "ovmf"
@@ -57,9 +57,9 @@ resource "proxmox_virtual_environment_vm" "management_cluster" {
   boot_order = ["virtio0"]
 
   disk {
-    interface   = "virtio0"
-    file_format = "raw"
-    size        = 10
+    interface    = "virtio0"
+    file_format  = "raw"
+    size         = 10
     datastore_id = local.image_datastore[var.node_name]
   }
 
@@ -107,5 +107,4 @@ resource "proxmox_virtual_environment_vm" "management_cluster" {
     }
   }
 }
-
 

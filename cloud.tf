@@ -6,29 +6,24 @@ resource "tls_private_key" "ssh_ca" {
 locals {
   base_user_data_file = <<-CLOUDINIT
 #cloud-config
-
-package_update: false
-package_upgrade: false
-hostname: cloud-config-test
-
+hostname: testing
+manage_etc_hosts: true
+fqdn: testing
+password: changeme 
+chpasswd:
+  expire: False
 users:
-      - name: olivia
-        groups:
-          - sudo
-        shell: /bin/bash
-        password: test
-        sudo: ALL=(ALL) NOPASSWD:ALL
-
+  - default
+runcmd:
+  - touch /tmp/cloud-init-run
+package_upgrade: true
 CLOUDINIT
 
 }
 
-locals {
-  cloud-config-store = "cloud-config-store"
-}
 
 resource "proxmox_virtual_environment_storage_directory" "cloud-config-store" {
-  id    = local.cloud-config-store
+  id    = "cloud-config-store"
   path  = "/var/lib/snippets/cloud-config-store"
   nodes = toset(data.proxmox_virtual_environment_nodes.available_nodes.names)
 
