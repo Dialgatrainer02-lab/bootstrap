@@ -1,0 +1,26 @@
+---
+- name: Verify
+  hosts: all
+  gather_facts: true
+  tasks:
+    - name: Collect installed package facts
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Assert podman packages are installed
+      ansible.builtin.assert:
+        that:
+          - "'podman' in ansible_facts.packages"
+          - "'crun' in ansible_facts.packages"
+
+    - name: Read registries.conf
+      ansible.builtin.slurp:
+        src: /etc/containers/registries.conf
+      register: podman_registries_conf
+
+    - name: Assert registries.conf has expected settings
+      ansible.builtin.assert:
+        that:
+          - "'short-name-mode = \"permissive\"' in (podman_registries_conf.content | b64decode)"
+          - "'docker.io' in (podman_registries_conf.content | b64decode)"
+          - "'quay.io' in (podman_registries_conf.content | b64decode)"

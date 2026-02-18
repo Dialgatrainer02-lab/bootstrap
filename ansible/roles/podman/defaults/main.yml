@@ -1,0 +1,9 @@
+---
+podman_packages:
+  - podman
+
+podman_registries_unqualified_search:
+  - docker.io
+  - quay.io
+
+podman_short_name_mode: permissive

@@ -1,0 +1,29 @@
+---
+dependency:
+  name: galaxy
+  options:
+    requirements-file: requirements.yml
+
+driver:
+  name: docker
+
+platforms:
+  - name: almalinux-10
+    image: quay.io/almalinuxorg/almalinux:10
+    pre_build_image: true
+    privileged: true
+    command: /sbin/init
+
+provisioner:
+  name: ansible
+
+verifier:
+  name: ansible
+
+scenario:
+  test_sequence:
+    - create
+    - converge
+    - idempotence
+    - verify
+    - destroy

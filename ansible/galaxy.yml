@@ -1,0 +1,7 @@
+namespace: homelab
+name: bootstrap
+version: 0.0.1
+readme: README.md
+authors:
+- Olivia Barker
+description: collection of roles for homelab

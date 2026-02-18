@@ -1,0 +1,2 @@
+unqualified-search-registries = [{{ podman_registries_unqualified_search | map('to_json') | join(', ') }}]
+short-name-mode = "{{ podman_short_name_mode }}"
