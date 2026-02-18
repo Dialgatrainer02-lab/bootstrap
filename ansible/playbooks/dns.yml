@@ -1,6 +1,6 @@
 ---
 - name: Configure DNS hosts
-  hosts: all
+  hosts: localhost
   become: true
   gather_facts: true
   roles:
