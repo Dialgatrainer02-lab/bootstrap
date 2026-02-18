@@ -37,9 +37,15 @@ package_update: true
 packages:
   - git
   - ansible-core
+password: changeme 
+chpasswd:
+  expire: False
+users:
+  - default
 runcmd:
   - mkdir -p /opt/ansible
   - git clone --depth 1 ${var.ansible_playbook_git_url} /opt/ansible/
+  - git pull
   - ansible-playbook /opt/ansible/ansible/playbooks/dns.yml
 CLOUDINIT
 
