@@ -41,10 +41,10 @@ module "base_template" {
     }
   }
   cloud_init_datastore_id = proxmox_virtual_environment_storage_directory.cloud_config_store.id
-  user_data = local.dns_user_data_file
-  pool_id   = module.bootstrap_pool.pool_id
-  node_name = local.target_node
-  tags      = ["base", "almalinux"]
+  user_data               = local.dns_user_data_file
+  pool_id                 = module.bootstrap_pool.pool_id
+  node_name               = local.target_node
+  tags                    = ["base", "almalinux"]
 }
 
 

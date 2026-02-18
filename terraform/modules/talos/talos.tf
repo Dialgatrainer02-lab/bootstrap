@@ -41,8 +41,8 @@ locals {
   # remove the cidr 
   # add ipv6 support in future
   target_talos_node = split("/", var.talos_ip_config.ipv4.address)[0]
-  cluster_name = "test-cluster"
-  cluster_endpoint = "https://127.0.0.1:6443"
+  cluster_name      = "test-cluster"
+  cluster_endpoint  = "https://127.0.0.1:6443"
 }
 
 data "talos_client_configuration" "this" {
@@ -60,7 +60,7 @@ resource "talos_machine_configuration_apply" "this" {
     yamlencode({
       machine = {
         install = {
-          disk = "/dev/vda"
+          disk  = "/dev/vda"
           image = data.talos_image_factory_urls.this.urls.installer_secureboot
         }
       }

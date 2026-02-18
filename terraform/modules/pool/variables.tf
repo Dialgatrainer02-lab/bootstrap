@@ -3,6 +3,6 @@ variable "pool_name" {
 }
 
 variable "pool_comment" {
-  type = string
+  type    = string
   default = "managed by terraform"
 }

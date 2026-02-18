@@ -1,7 +1,7 @@
 provider "proxmox" {
-    endpoint = var.pve_endpoint
+  endpoint = var.pve_endpoint
   # Choose one authentication method:
-#   api_token = var.pve_api_token
+  #   api_token = var.pve_api_token
 
   username = var.pve_username
   password = var.pve_password
