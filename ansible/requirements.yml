@@ -1,3 +1,5 @@
 ---
 roles: []
-collections: []
+collections: 
+  - name: ./
+    type: dir
