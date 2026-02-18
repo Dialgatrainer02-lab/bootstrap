@@ -46,6 +46,7 @@ runcmd:
   - mkdir -p /opt/ansible
   - git clone --depth 1 ${var.ansible_playbook_git_url} /opt/ansible/
   - cd /opt/ansible/ansible
+  - git pull
   - ansible-galaxy install -r ./requirements.yml
   - ansible-playbook ./playbooks/dns.yml
 CLOUDINIT
