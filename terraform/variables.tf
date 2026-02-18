@@ -12,3 +12,8 @@ variable "pve_password" {
   type = string
   description = "password for the provided user"
 }
+
+variable "ansible_playbook_git_url" {
+  type        = string
+  description = "git URL for the ansible playbook repository"
+}

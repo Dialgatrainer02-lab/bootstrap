@@ -46,6 +46,7 @@ resource "proxmox_virtual_environment_vm" "management_cluster" {
   }
 
   cpu {
+    flags = []
     cores = 2
     type  = "host" # recommended for modern CPUs
   }

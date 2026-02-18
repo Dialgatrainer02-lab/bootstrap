@@ -1,0 +1,1 @@
+ansible_playbook_git_url = "https://github.com/Dialgatrainer02-lab/bootstrap"

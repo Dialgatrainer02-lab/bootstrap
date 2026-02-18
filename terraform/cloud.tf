@@ -28,6 +28,21 @@ runcmd:
 package_upgrade: true
 CLOUDINIT
 
+  dns_user_data_file = <<-CLOUDINIT
+#cloud-config
+hostname: dns
+manage_etc_hosts: true
+fqdn: dns
+package_update: true
+packages:
+  - git
+  - ansible-core
+runcmd:
+  - mkdir -p /opt/ansible
+  - git clone --depth 1 ${var.ansible_playbook_git_url} /opt/ansible/
+  - ansible-playbook /opt/ansible/ansible/playbooks/dns.yml
+CLOUDINIT
+
 }
 
 
@@ -40,3 +55,4 @@ resource "proxmox_virtual_environment_storage_directory" "cloud_config_store" {
   shared  = true
   disable = false
 }
+

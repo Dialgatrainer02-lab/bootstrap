@@ -55,6 +55,7 @@ resource "proxmox_virtual_environment_vm" "base_template" {
   }
 
   cpu {
+    flags = []
     cores = 2
     type  = "host" # recommended for modern CPUs
   }
