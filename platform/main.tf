@@ -1,5 +1,5 @@
 provider "proxmox" {
-  # Configure via environment variables or explicit arguments.
+  insecure = true
 }
 
 provider "talos" {
