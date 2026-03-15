@@ -1,9 +1,0 @@
----
-- name: Configure DNS hosts
-  hosts: localhost
-  become: true
-  gather_facts: true
-  roles:
-    - role: homelab.bootstrap.docker
-  tasks:
-  

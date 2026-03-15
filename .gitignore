@@ -1,2 +1,3 @@
-.ansible
-.venv
+.terraform*
+*tfstate*
+proxmox.auto.tfvars

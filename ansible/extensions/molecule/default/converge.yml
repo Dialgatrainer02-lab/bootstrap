@@ -1,8 +1,0 @@
----
-- name: Converge
-  hosts: all
-  gather_facts: true
-  vars:
-    docker_manage_service: false
-  roles:
-    - role: homelab.bootstrap.docker
