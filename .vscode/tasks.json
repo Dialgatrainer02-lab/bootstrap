@@ -1,0 +1,23 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "tflint (workspace)",
+      "type": "shell",
+      "command": "tflint",
+      "args": ["--recursive"],
+      "problemMatcher": [],
+      "group": "build"
+    },
+    {
+      "label": "tflint (platform)",
+      "type": "shell",
+      "command": "tflint",
+      "args": [],
+      "options": {
+        "cwd": "${workspaceFolder}/platform"
+      },
+      "problemMatcher": []
+    }
+  ]
+}
