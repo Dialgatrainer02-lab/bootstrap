@@ -40,9 +40,19 @@ packages:
 password: changeme 
 chpasswd:
   expire: False
+write_files:
+  - path: /etc/ssh/trusted-user-ca-keys.pem
+    permissions: "0644"
+    content: |
+      ${tls_private_key.ssh_ca.public_key_openssh}
+  - path: /etc/ssh/sshd_config.d/99-trusted-user-ca.conf
+    permissions: "0644"
+    content: |
+      TrustedUserCAKeys /etc/ssh/trusted-user-ca-keys.pem
 users:
   - default
 runcmd:
+  - systemctl reload sshd
   - mkdir -p /opt/ansible
   - git clone --depth 1 ${var.ansible_playbook_git_url} /opt/ansible/
   - cd /opt/ansible/ansible

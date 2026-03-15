@@ -1,0 +1,41 @@
+---
+- name: Ensure Docker prerequisites are installed
+  ansible.builtin.dnf:
+    name: "{{ docker_prereq_packages }}"
+    state: present
+  when:
+    - ansible_os_family == "RedHat"
+    - docker_prereq_packages | length > 0
+
+- name: Configure Docker CE repository
+  ansible.builtin.yum_repository:
+    name: "{{ docker_repo_name }}"
+    description: "{{ docker_repo_description }}"
+    baseurl: "{{ docker_repo_baseurl }}"
+    enabled: true
+    gpgcheck: true
+    gpgkey: "{{ docker_repo_gpgkey }}"
+  when:
+    - ansible_os_family == "RedHat"
+    - docker_manage_repo | bool
+
+- name: Ensure Docker packages are installed
+  ansible.builtin.package:
+    name: "{{ docker_packages }}"
+    state: present
+
+- name: Configure Docker daemon
+  ansible.builtin.template:
+    src: daemon.json.j2
+    dest: "{{ docker_daemon_json_path }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart docker
+
+- name: Ensure Docker service is enabled and running
+  ansible.builtin.service:
+    name: "{{ docker_service_name }}"
+    enabled: "{{ docker_service_enabled }}"
+    state: "{{ docker_service_state }}"
+  when: docker_manage_service | bool

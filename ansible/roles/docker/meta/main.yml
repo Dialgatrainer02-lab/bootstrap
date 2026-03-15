@@ -1,7 +1,7 @@
 ---
 galaxy_info:
   author: Olivia Barker
-  description: DEPRECATED - use the docker role for container runtime setup
+  description: Install and configure Docker Engine with compose plugin and daemon defaults
   license: MIT
   min_ansible_version: "2.14"
   platforms:

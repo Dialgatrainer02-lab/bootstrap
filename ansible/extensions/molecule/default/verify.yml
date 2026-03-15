@@ -7,20 +7,26 @@
       ansible.builtin.package_facts:
         manager: auto
 
-    - name: Assert podman packages are installed
+    - name: Assert docker packages are installed
       ansible.builtin.assert:
         that:
-          - "'podman' in ansible_facts.packages"
-          - "'crun' in ansible_facts.packages"
+          - "'docker-ce' in ansible_facts.packages"
+          - "'docker-ce-cli' in ansible_facts.packages"
+          - "'containerd.io' in ansible_facts.packages"
+          - "'docker-compose-plugin' in ansible_facts.packages"
 
-    - name: Read registries.conf
+    - name: Read docker daemon configuration
       ansible.builtin.slurp:
-        src: /etc/containers/registries.conf
-      register: podman_registries_conf
+        src: /etc/docker/daemon.json
+      register: docker_daemon_json_raw
 
-    - name: Assert registries.conf has expected settings
+    - name: Parse docker daemon configuration
+      ansible.builtin.set_fact:
+        docker_daemon_json: "{{ docker_daemon_json_raw.content | b64decode | from_json }}"
+
+    - name: Assert daemon config has expected settings
       ansible.builtin.assert:
         that:
-          - "'short-name-mode = \"permissive\"' in (podman_registries_conf.content | b64decode)"
-          - "'docker.io' in (podman_registries_conf.content | b64decode)"
-          - "'quay.io' in (podman_registries_conf.content | b64decode)"
+          - "docker_daemon_json['log-driver'] == 'journald'"
+          - "docker_daemon_json['firewall-backend'] == 'nftables'"
+          - "docker_daemon_json['ipv6'] | bool"

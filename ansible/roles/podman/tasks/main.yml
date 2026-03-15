@@ -1,4 +1,8 @@
 ---
+- name: Podman role deprecation notice
+  ansible.builtin.debug:
+    msg: "The podman role is deprecated. Use homelab.bootstrap.docker instead."
+
 - name: Ensure podman packages are installed
   ansible.builtin.dnf:
     name: "{{ podman_packages }}"

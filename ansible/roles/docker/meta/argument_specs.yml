@@ -1,0 +1,102 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure Docker Engine
+    description:
+      - Install Docker engine packages and configure daemon defaults.
+    options:
+      docker_manage_repo:
+        type: bool
+        default: true
+        description:
+          - Whether to manage the Docker yum repository.
+      docker_repo_name:
+        type: str
+        default: docker-ce-stable
+        description:
+          - Yum repository ID for Docker CE.
+      docker_repo_description:
+        type: str
+        default: Docker CE Stable - $basearch
+        description:
+          - Yum repository description.
+      docker_repo_baseurl:
+        type: str
+        default: https://download.docker.com/linux/centos/$releasever/$basearch/stable
+        description:
+          - Yum repository base URL.
+      docker_repo_gpgkey:
+        type: str
+        default: https://download.docker.com/linux/centos/gpg
+        description:
+          - Yum repository GPG key URL.
+      docker_prereq_packages:
+        type: list
+        elements: str
+        default:
+          - dnf-plugins-core
+        description:
+          - Prerequisite packages installed before Docker packages.
+      docker_packages:
+        type: list
+        elements: str
+        default:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        description:
+          - Docker packages to install.
+      docker_service_name:
+        type: str
+        default: docker
+        description:
+          - Service unit name for Docker.
+      docker_manage_service:
+        type: bool
+        default: true
+        description:
+          - Whether to manage Docker service state.
+      docker_service_enabled:
+        type: bool
+        default: true
+        description:
+          - Whether Docker service should be enabled at boot.
+      docker_service_state:
+        type: str
+        default: started
+        choices:
+          - started
+          - stopped
+          - restarted
+        description:
+          - Target service state when service management is enabled.
+      docker_daemon_json_path:
+        type: str
+        default: /etc/docker/daemon.json
+        description:
+          - Path to Docker daemon JSON configuration file.
+      docker_daemon_log_driver:
+        type: str
+        default: journald
+        description:
+          - Docker daemon log driver.
+      docker_daemon_firewall_backend:
+        type: str
+        default: nftables
+        choices:
+          - iptables
+          - nftables
+        description:
+          - Docker daemon firewall backend.
+      docker_daemon_ipv6:
+        type: bool
+        default: true
+        description:
+          - Whether Docker IPv6 support is enabled.
+      docker_daemon_fixed_cidr_v6:
+        type: str
+        default: fd00:dead:beef::/48
+        description:
+          - Fixed IPv6 subnet assigned to Docker bridge networking.
