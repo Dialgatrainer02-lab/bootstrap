@@ -1,6 +1,3 @@
-locals {
-  example_enabled = var.enable_examples
-}
 
 # Auto-discover available Proxmox nodes for downstream modules.
 data "proxmox_virtual_environment_nodes" "discovered" {}
@@ -12,3 +9,4 @@ data "proxmox_virtual_environment_nodes" "discovered" {}
 # - Proxmox VM resources (bpg/proxmox)
 # - cloud-init user-data templates (hashicorp/cloudinit)
 # - Talos machine config + apply steps (siderolabs/talos)
+  

@@ -3,10 +3,6 @@ output "cluster_name" {
   value       = var.cluster_name
 }
 
-output "nodes" {
-  description = "Node definitions passed into the infra module."
-  value       = var.nodes
-}
 
 output "discovered_nodes" {
   description = "Raw node data discovered from the Proxmox provider."
