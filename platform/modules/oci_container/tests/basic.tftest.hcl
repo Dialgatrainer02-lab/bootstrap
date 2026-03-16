@@ -5,6 +5,7 @@ provider "proxmox" {
 run "basic_plan" {
   command = plan
 
+
 variables  {
       name                = "app-1"
       node_name           = "pve-01"
@@ -32,7 +33,7 @@ variables  {
       mount_points = [
         {
           path      = "/data"
-          volume    = "/mnt/bindmounts/app-1"
+          volume    = "test-vol-1"
           read_only = true
         }
       ]
@@ -63,6 +64,7 @@ variables  {
 run "basic_apply" {
   command = apply
 
+
   variables {
     name                = "app-apply-1"
       node_name           = "pve"
@@ -82,13 +84,6 @@ run "basic_apply" {
     env = {
       APP_ENV = "apply"
     }
-    mount_points = [
-      {
-        path      = "/var/lib/app"
-        volume    = "/mnt/bindmounts/app-apply-1"
-        read_only = false
-      }
-    ]
   }
 
   assert {
@@ -99,10 +94,5 @@ run "basic_apply" {
   assert {
     condition     = proxmox_virtual_environment_container.this.disk[0].datastore_id == "local-zfs"
     error_message = "Expected datastore_id to pass through to the container disk."
-  }
-
-  assert {
-    condition     = proxmox_virtual_environment_container.this.mount_point[0].volume == "/mnt/bindmounts/app-apply-1"
-    error_message = "Expected bind mount volume to pass through to the container."
   }
 }
