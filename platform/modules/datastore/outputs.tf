@@ -1,4 +1,4 @@
-output "storage_id" {
+output "id" {
   value       = try(proxmox_virtual_environment_storage_directory.this[0].id, null)
   description = "Storage ID for the datastore."
 }
