@@ -3,6 +3,10 @@ provider "proxmox" {
 }
 
 run "basic_plan" {
+  module {
+    source = "./modules/datastore"
+  }
+
   command = plan
 
   variables {
@@ -24,6 +28,10 @@ run "basic_plan" {
 }
 
 run "apply_plan" {
+  module {
+    source = "./modules/datastore"
+  }
+
   command = apply
 
   variables {
