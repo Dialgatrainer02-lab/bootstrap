@@ -122,7 +122,7 @@ resource "proxmox_virtual_environment_vm" "this" {
   tags      = var.tags
 
   machine = var.machine
-
+  bios = var.bios
   operating_system {
     type = var.os_type
   }

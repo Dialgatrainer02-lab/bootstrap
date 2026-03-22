@@ -18,6 +18,7 @@ module "infra" {
   source = "./modules/infra"
 
   cluster_name = var.cluster_name
+  local_repo_vm_enabled = true
 
   providers = {
     proxmox   = proxmox

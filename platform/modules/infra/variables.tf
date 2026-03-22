@@ -146,26 +146,3 @@ variable "local_repo_vm_dns_domain" {
   default     = null
 }
 
-variable "local_repo_vm_ssh_authorized_keys" {
-  type        = list(string)
-  description = "SSH public keys to inject via cloud-init into the local repo VM."
-  default     = []
-}
-
-variable "local_repo_vm_repo_url" {
-  type        = string
-  description = "Optional git repository URL to clone at first boot in the local repo VM."
-  default     = null
-}
-
-variable "local_repo_vm_repo_path" {
-  type        = string
-  description = "Path to clone the repository into on the local repo VM."
-  default     = "/opt/repo"
-}
-
-variable "local_repo_vm_repo_branch" {
-  type        = string
-  description = "Branch to checkout when cloning local_repo_vm_repo_url."
-  default     = "main"
-}

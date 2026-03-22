@@ -74,9 +74,4 @@ module "local_repo_vm" {
   ipv4_gateway        = var.local_repo_vm_ipv4_gateway
   dns_servers         = var.local_repo_vm_dns_servers
   dns_domain          = var.local_repo_vm_dns_domain
-  ssh_authorized_keys = var.local_repo_vm_ssh_authorized_keys
-
-  repo_url    = var.local_repo_vm_repo_url
-  repo_path   = var.local_repo_vm_repo_path
-  repo_branch = var.local_repo_vm_repo_branch
 }

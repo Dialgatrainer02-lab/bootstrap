@@ -123,19 +123,19 @@ runcmd:
   - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
   - dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 
-  # Initial sync
-  - /usr/local/bin/sync-repos.sh
-
-  # Enable services
-  - systemctl daemon-reexec
-  - systemctl enable --now nginx
-  - systemctl enable --now reposync.timer
-
-  # Firewall (optional)
-  - |
-    if systemctl is-active --quiet firewalld; then
-      firewall-cmd --permanent --add-service=http
-      firewall-cmd --reload
-    fi
+#  #Initial sync
+  # - /usr/local/bin/sync-repos.sh
+# 
+#  #Enable services
+  # - systemctl daemon-reexec
+  # - systemctl enable --now nginx
+  # - systemctl enable --now reposync.timer
+# 
+#  #Firewall (optional)
+  # - |
+    # if systemctl is-active --quiet firewalld; then
+      # firewall-cmd --permanent --add-service=http
+      # firewall-cmd --reload
+    # fi
 
 final_message: "Mirror ready with snapshots and systemd timer. Use /repos/current/ for clients."
