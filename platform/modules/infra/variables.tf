@@ -116,6 +116,12 @@ variable "local_repo_vm_cpu_type" {
   default     = "host"
 }
 
+variable "local_repo_vm_cpu_flags" {
+  type        = list(string)
+  description = "Optional CPU flags for the local repo VM."
+  default     = []
+}
+
 variable "local_repo_vm_memory_mb" {
   type        = number
   description = "Memory for the local repo VM."

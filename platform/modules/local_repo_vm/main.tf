@@ -5,6 +5,7 @@ locals {
       hostname            = var.name
       ssh_authorized_keys = local.authorized_keys
       drive_path          = "/dev/sdb"
+      sync_repos_script   = file("${path.module}/sync-repos.sh")
     }),
   )
 }
@@ -50,6 +51,7 @@ module "vm" {
   vm_id     = var.vm_id
   cpu_cores = var.cpu_cores
   cpu_type  = var.cpu_type
+  cpu_flags = var.cpu_flags
   memory_mb = var.memory_mb
 
   disk_size_gb    = var.disk_size_gb

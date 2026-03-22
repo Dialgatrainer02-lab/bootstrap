@@ -50,14 +50,19 @@ write_files:
       CURRENT_LINK="$BASE_DIR/current"
 
       mkdir -p "$SNAPSHOT_DIR"
+      
 
       echo "=== Creating snapshot: $SNAPSHOT_DATE ==="
 
       # Repo layout
       ALMA_DIR="$SNAPSHOT_DIR/almalinux/10"
       EPEL_DIR="$SNAPSHOT_DIR/epel"
+      DOCKER_DIR="$SNAPSHOT_DIR/docker"
+      HASHICORP_DIR="$SNAPSHOT_DIR/hashicorp"
+      VECTOR_DIR="$SNAPSHOT_DIR/vector"
+      OPENBAO_DIR="$SNAPSHOT_DIR/openbao"
 
-      mkdir -p "$ALMA_DIR" "$EPEL_DIR"
+      mkdir -p "$ALMA_DIR" "$EPEL_DIR" "$DOCKER_DIR" "$HASHICORP_DIR" "$VECTOR_DIR" "$OPENBAO_DIR"
 
       echo "=== Syncing AlmaLinux 10 ==="
       for repo in baseos appstream extras crb; do
@@ -85,6 +90,47 @@ write_files:
         -p "$EPEL_DIR"
 
       createrepo_c "$EPEL_DIR"
+
+      echo "=== Syncing Docker repo ==="
+      reposync \
+        --repoid=docker-ce-stable \
+        --download-metadata \
+        --delete \
+        --norepopath \
+        --arch=x86_64 \
+        --newest-only \
+        -p "$DOCKER_DIR"
+      createrepo_c "$DOCKER_DIR"
+
+      echo "=== Syncing HashiCorp repo ==="
+      reposync \
+        --repoid=hashicorp \
+        --download-metadata \
+        --delete \
+        --norepopath \
+        --arch=x86_64 \
+        --newest-only \
+        -p "$HASHICORP_DIR"
+      createrepo_c "$HASHICORP_DIR"
+
+      echo "=== Syncing Vector repo ==="
+      reposync \
+        --repoid=vector \
+        --download-metadata \
+        --delete \
+        --norepopath \
+        --arch=x86_64 \
+        --newest-only \
+        -p "$VECTOR_DIR"
+      createrepo_c "$VECTOR_DIR"
+
+      echo "=== Syncing OpenBao packages ==="
+      rm -f "$OPENBAO_DIR"/*.rpm
+      dnf download --resolve --alldeps --destdir "$OPENBAO_DIR" openbao
+      createrepo_c "$OPENBAO_DIR"
+
+      chmod +755 "$BASE_DIR"
+      chown nginx:nginx "$BASE_DIR"
 
       echo "=== Updating current symlink ==="
       ln -sfn "$SNAPSHOT_DIR" "$CURRENT_LINK"
@@ -127,6 +173,7 @@ write_files:
           location / {
               autoindex on;
           }
+          disable_symlinks off;
       }
 
 runcmd:
@@ -135,6 +182,11 @@ runcmd:
 
   # Enable EPEL repo for mirroring
   - dnf install -y epel-release
+
+  # Add upstream third-party repos (for mirroring only)
+  - dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+  - curl -1sLf 'https://setup.vector.dev' | bash
 
   # Initial sync
   - /usr/local/bin/sync-repos.sh

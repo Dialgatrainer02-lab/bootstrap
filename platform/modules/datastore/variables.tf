@@ -14,6 +14,11 @@ variable "type" {
   }
 }
 
+variable "pool_id" {
+  type = string
+  default = null
+  nullable = true
+}
 variable "path" {
   type        = string
   description = "Filesystem path for the directory storage."

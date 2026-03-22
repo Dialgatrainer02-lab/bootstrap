@@ -58,6 +58,12 @@ variable "cpu_type" {
   default     = "host"
 }
 
+variable "cpu_flags" {
+  type        = list(string)
+  description = "Optional list of CPU flags to expose to the guest."
+  default     = []
+}
+
 variable "memory_mb" {
   type        = number
   description = "Dedicated memory in MB."
