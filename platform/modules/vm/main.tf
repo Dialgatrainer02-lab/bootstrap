@@ -127,6 +127,10 @@ resource "proxmox_virtual_environment_vm" "this" {
     type = var.os_type
   }
 
+  agent {
+    enabled = var.guest_agent_enabled
+  }
+
   efi_disk {
     datastore_id      = var.datastore_id
     type              = var.efi_disk_type
@@ -174,8 +178,11 @@ resource "proxmox_virtual_environment_vm" "this" {
     }
   }
 
+  serial_device {}
   initialization {
     datastore_id = var.datastore_id
+    interface = var.cloud_init_interface
+    file_format = "raw"
 
     user_data_file_id    = local.cloud_init_user_data_file_id
     meta_data_file_id    = local.cloud_init_meta_data_file_id

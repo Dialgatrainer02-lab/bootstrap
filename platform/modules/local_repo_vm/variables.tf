@@ -34,6 +34,12 @@ variable "boot_image_kind" {
   }
 }
 
+variable "pool_id" {
+  type        = string
+  description = "Optional Proxmox pool ID to assign the VM."
+  default     = null
+}
+
 variable "vm_id" {
   type        = number
   description = "Optional Proxmox VM ID. Leave null for auto-assignment."
@@ -49,7 +55,7 @@ variable "cpu_cores" {
 variable "cpu_type" {
   type        = string
   description = "CPU type/model exposed to the guest (e.g., host, x86-64-v2)."
-  default     = null
+  default     = "host"
 }
 
 variable "memory_mb" {
@@ -62,6 +68,12 @@ variable "disk_size_gb" {
   type        = number
   description = "Primary disk size in GB."
   default     = 20
+}
+
+variable "packages_disk_size_gb" {
+  type        = number
+  description = "Size in GB of the secondary disk used to store mirrored packages."
+  default     = 100
 }
 
 variable "network_bridge" {
@@ -98,6 +110,12 @@ variable "cloud_init_user_data" {
   type        = string
   description = "Optional cloud-init user-data content. If unset, a default template is rendered."
   default     = null
+}
+
+variable "ssh_authorized_keys" {
+  type        = list(string)
+  description = "SSH public keys for the admin user in cloud-init."
+  default     = []
 }
 
 variable "tags" {

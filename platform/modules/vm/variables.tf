@@ -84,6 +84,12 @@ variable "bios" {
   default     = "ovmf"
 }
 
+variable "guest_agent_enabled" {
+  type        = bool
+  description = "Whether to enable the Proxmox QEMU guest agent for this VM."
+  default     = true
+}
+
 variable "efi_disk_type" {
   type        = string
   description = "EFI disk type/size."
@@ -94,6 +100,17 @@ variable "cloud_init_snippets_datastore_id" {
   type        = string
   description = "Datastore to store cloud-init snippets (content_type=snippets)."
   default     = null
+}
+
+variable "cloud_init_interface" {
+  type        = string
+  description = "Disk bus slot for the cloud-init drive (e.g., sata1, scsi1, ide2, virtio1)."
+  default     = "sata1"
+
+  validation {
+    condition     = can(regex("^(ide|sata|scsi|virtio)[0-9]+$", var.cloud_init_interface))
+    error_message = "cloud_init_interface must match a valid bus slot, such as sata1, scsi1, ide2, or virtio1."
+  }
 }
 
 variable "cloud_init_user_data" {
@@ -171,7 +188,7 @@ variable "cpu_cores" {
 variable "cpu_type" {
   type        = string
   description = "CPU type/model exposed to the guest (e.g., host, x86-64-v2)."
-  default     = null
+  default     = "host"
 }
 
 variable "memory_mb" {
