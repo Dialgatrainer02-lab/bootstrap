@@ -68,7 +68,7 @@ resource "proxmox_virtual_environment_container" "this" {
     }
 
     dns {
-      domain = var.dns_domain
+      domain  = var.dns_domain
       servers = var.dns_servers
     }
 

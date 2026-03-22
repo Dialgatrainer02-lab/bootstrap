@@ -1,0 +1,141 @@
+#cloud-config
+hostname: ${hostname}
+package_update: true
+package_upgrade: false
+
+packages:
+  - dnf-plugins-core
+  - yum-utils
+  - createrepo_c
+  - nginx
+
+write_files:
+  - path: /usr/local/bin/sync-repos.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      set -euo pipefail
+
+      BASE_DIR="/var/www/html/repos"
+      SNAPSHOT_DATE=$(date +%F)
+
+      SNAPSHOT_DIR="$BASE_DIR/snapshots/$SNAPSHOT_DATE"
+      CURRENT_LINK="$BASE_DIR/current"
+
+      mkdir -p "$SNAPSHOT_DIR"
+
+      echo "=== Creating snapshot: $SNAPSHOT_DATE ==="
+
+      # Repo layout
+      ALMA_DIR="$SNAPSHOT_DIR/almalinux/9"
+      DOCKER_DIR="$SNAPSHOT_DIR/docker"
+      HASHICORP_DIR="$SNAPSHOT_DIR/hashicorp"
+
+      mkdir -p "$ALMA_DIR" "$DOCKER_DIR" "$HASHICORP_DIR"
+
+      echo "=== Syncing AlmaLinux ==="
+      for repo in baseos appstream extras; do
+        reposync \
+          --repoid=$repo \
+          --download-metadata \
+          --downloadcomps \
+          --delete \
+          --norepopath \
+          --arch=x86_64 \
+          --newest-only \
+          -p "$ALMA_DIR/$repo"
+
+        createrepo_c "$ALMA_DIR/$repo"
+      done
+
+      echo "=== Syncing Docker ==="
+      reposync \
+        --repoid=docker-ce-stable \
+        --download-metadata \
+        --delete \
+        --norepopath \
+        --arch=x86_64 \
+        --newest-only \
+        -p "$DOCKER_DIR"
+
+      createrepo_c "$DOCKER_DIR"
+
+      echo "=== Syncing HashiCorp ==="
+      reposync \
+        --repoid=hashicorp \
+        --download-metadata \
+        --delete \
+        --norepopath \
+        --arch=x86_64 \
+        --newest-only \
+        -p "$HASHICORP_DIR"
+
+      createrepo_c "$HASHICORP_DIR"
+
+      echo "=== Updating current symlink ==="
+      ln -sfn "$SNAPSHOT_DIR" "$CURRENT_LINK"
+
+      echo "=== Cleanup old snapshots (keep last 7) ==="
+      ls -dt $BASE_DIR/snapshots/* | tail -n +8 | xargs -r rm -rf
+
+  - path: /etc/systemd/system/reposync.service
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Sync internal repository mirror
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/local/bin/sync-repos.sh
+
+  - path: /etc/systemd/system/reposync.timer
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Daily repo sync
+
+      [Timer]
+      OnCalendar=*-*-* 02:00:00
+      Persistent=true
+
+      [Install]
+      WantedBy=timers.target
+
+  - path: /etc/nginx/conf.d/repos.conf
+    permissions: '0644'
+    content: |
+      server {
+          listen 80;
+          server_name _;
+
+          root /var/www/html;
+
+          location / {
+              autoindex on;
+          }
+      }
+
+runcmd:
+  # Enable base repos
+  - dnf config-manager --set-enabled baseos appstream extras
+
+  # Add upstream repos (for mirroring only)
+  - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+  - dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+
+  # Initial sync
+  - /usr/local/bin/sync-repos.sh
+
+  # Enable services
+  - systemctl daemon-reexec
+  - systemctl enable --now nginx
+  - systemctl enable --now reposync.timer
+
+  # Firewall (optional)
+  - |
+    if systemctl is-active --quiet firewalld; then
+      firewall-cmd --permanent --add-service=http
+      firewall-cmd --reload
+    fi
+
+final_message: "Mirror ready with snapshots and systemd timer. Use /repos/current/ for clients."

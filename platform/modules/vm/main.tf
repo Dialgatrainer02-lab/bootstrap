@@ -1,9 +1,22 @@
 locals {
-  hostname             = coalesce(var.hostname, var.name)
   boot_image_datastore = coalesce(var.boot_image_datastore_id, var.datastore_id)
   use_boot_image_url   = var.boot_image_url != null
   use_boot_image_id    = var.boot_image_id != null
   boot_image_file_id   = coalesce(var.boot_image_id, try(proxmox_virtual_environment_download_file.boot[0].id, null))
+
+  cloud_init_snippets_datastore_id = var.cloud_init_snippets_datastore_id
+  cloud_init_user_data_file_id = try(coalesce(
+    var.cloud_init_user_data_file_id,
+    try(proxmox_virtual_environment_file.cloud_init_user_data[0].id, null),
+  ), null)
+  cloud_init_meta_data_file_id = try(coalesce(
+    var.cloud_init_meta_data_file_id,
+    try(proxmox_virtual_environment_file.cloud_init_meta_data[0].id, null),
+  ), null)
+  cloud_init_network_data_file_id = try(coalesce(
+    var.cloud_init_network_data_file_id,
+    try(proxmox_virtual_environment_file.cloud_init_network_data[0].id, null),
+  ), null)
 
   network_devices = length(var.network_devices) > 0 ? var.network_devices : [
     {
@@ -15,6 +28,7 @@ locals {
     datastore_id = var.datastore_id
     size_gb      = var.disk_size_gb
     interface    = "scsi0"
+    file_id      = var.boot_image_kind == "disk" ? local.boot_image_file_id : null
   }
 
   extra_disks = [
@@ -26,6 +40,66 @@ locals {
   ]
 
   disks = concat([local.primary_disk], local.extra_disks)
+}
+
+resource "proxmox_virtual_environment_file" "cloud_init_user_data" {
+  count = var.cloud_init_user_data != null && var.cloud_init_user_data_file_id == null ? 1 : 0
+
+  content_type = "snippets"
+  datastore_id = local.cloud_init_snippets_datastore_id
+  node_name    = var.node_name
+
+  source_raw {
+    file_name = coalesce(var.cloud_init_user_data_file_name, "${var.name}-user-data.yaml")
+    data      = var.cloud_init_user_data
+  }
+
+  lifecycle {
+    precondition {
+      condition     = var.cloud_init_snippets_datastore_id != null
+      error_message = "cloud_init_snippets_datastore_id must be set when providing cloud_init_user_data."
+    }
+  }
+}
+
+resource "proxmox_virtual_environment_file" "cloud_init_meta_data" {
+  count = var.cloud_init_meta_data != null && var.cloud_init_meta_data_file_id == null ? 1 : 0
+
+  content_type = "snippets"
+  datastore_id = local.cloud_init_snippets_datastore_id
+  node_name    = var.node_name
+
+  source_raw {
+    file_name = coalesce(var.cloud_init_meta_data_file_name, "${var.name}-meta-data.yaml")
+    data      = var.cloud_init_meta_data
+  }
+
+  lifecycle {
+    precondition {
+      condition     = var.cloud_init_snippets_datastore_id != null
+      error_message = "cloud_init_snippets_datastore_id must be set when providing cloud_init_meta_data."
+    }
+  }
+}
+
+resource "proxmox_virtual_environment_file" "cloud_init_network_data" {
+  count = var.cloud_init_network_data != null && var.cloud_init_network_data_file_id == null ? 1 : 0
+
+  content_type = "snippets"
+  datastore_id = local.cloud_init_snippets_datastore_id
+  node_name    = var.node_name
+
+  source_raw {
+    file_name = coalesce(var.cloud_init_network_data_file_name, "${var.name}-network-data.yaml")
+    data      = var.cloud_init_network_data
+  }
+
+  lifecycle {
+    precondition {
+      condition     = var.cloud_init_snippets_datastore_id != null
+      error_message = "cloud_init_snippets_datastore_id must be set when providing cloud_init_network_data."
+    }
+  }
 }
 
 resource "proxmox_virtual_environment_download_file" "boot" {
@@ -78,11 +152,15 @@ resource "proxmox_virtual_environment_vm" "this" {
       datastore_id = disk.value.datastore_id
       size         = disk.value.size_gb
       interface    = disk.value.interface
+      file_id      = try(disk.value.file_id, null)
     }
   }
 
-  cdrom {
-    file_id = local.boot_image_file_id
+  dynamic "cdrom" {
+    for_each = var.boot_image_kind == "iso" ? [true] : []
+    content {
+      file_id = local.boot_image_file_id
+    }
   }
 
   dynamic "network_device" {
@@ -98,6 +176,11 @@ resource "proxmox_virtual_environment_vm" "this" {
 
   initialization {
     datastore_id = var.datastore_id
+
+    user_data_file_id    = local.cloud_init_user_data_file_id
+    meta_data_file_id    = local.cloud_init_meta_data_file_id
+    network_data_file_id = local.cloud_init_network_data_file_id
+
     ip_config {
       ipv4 {
         address = var.ipv4_address
@@ -120,6 +203,21 @@ resource "proxmox_virtual_environment_vm" "this" {
     precondition {
       condition     = local.use_boot_image_id != local.use_boot_image_url
       error_message = "Exactly one of boot_image_id or boot_image_url must be set."
+    }
+
+    precondition {
+      condition     = !(var.cloud_init_user_data != null && var.cloud_init_user_data_file_id != null)
+      error_message = "Only one of cloud_init_user_data or cloud_init_user_data_file_id can be set."
+    }
+
+    precondition {
+      condition     = !(var.cloud_init_meta_data != null && var.cloud_init_meta_data_file_id != null)
+      error_message = "Only one of cloud_init_meta_data or cloud_init_meta_data_file_id can be set."
+    }
+
+    precondition {
+      condition     = !(var.cloud_init_network_data != null && var.cloud_init_network_data_file_id != null)
+      error_message = "Only one of cloud_init_network_data or cloud_init_network_data_file_id can be set."
     }
   }
 }

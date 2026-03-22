@@ -27,3 +27,9 @@ output "boot_image_download_size" {
   description = "Size of the downloaded boot image, in bytes."
   value       = try(proxmox_virtual_environment_download_file.boot[0].size, null)
 }
+
+output "vm" {
+  value = proxmox_virtual_environment_vm.this
+  description = "Proxmox vm resource"
+  sensitive = true
+}

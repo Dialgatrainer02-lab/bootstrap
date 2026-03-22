@@ -19,6 +19,17 @@ variable "boot_image_id" {
   default     = null
 }
 
+variable "boot_image_kind" {
+  type        = string
+  description = "How the boot_image_id/URL is used: iso mounts as cdrom; disk attaches as the primary disk."
+  default     = "iso"
+
+  validation {
+    condition     = contains(["iso", "disk"], var.boot_image_kind)
+    error_message = "boot_image_kind must be one of: iso, disk."
+  }
+}
+
 variable "boot_image_url" {
   type        = string
   description = "URL to download the boot image into the datastore."
@@ -71,6 +82,66 @@ variable "efi_disk_type" {
   type        = string
   description = "EFI disk type/size."
   default     = "4m"
+}
+
+variable "cloud_init_snippets_datastore_id" {
+  type        = string
+  description = "Datastore to store cloud-init snippets (content_type=snippets)."
+  default     = null
+}
+
+variable "cloud_init_user_data" {
+  type        = string
+  description = "Cloud-init user-data content. Use file(\"path\") at the callsite to pass a local file."
+  default     = null
+}
+
+variable "cloud_init_user_data_file_id" {
+  type        = string
+  description = "Existing Proxmox snippet file id to use as cloud-init user-data."
+  default     = null
+}
+
+variable "cloud_init_user_data_file_name" {
+  type        = string
+  description = "Optional file name for uploaded cloud-init user-data snippet."
+  default     = null
+}
+
+variable "cloud_init_meta_data" {
+  type        = string
+  description = "Cloud-init meta-data content. Use file(\"path\") at the callsite to pass a local file."
+  default     = null
+}
+
+variable "cloud_init_meta_data_file_id" {
+  type        = string
+  description = "Existing Proxmox snippet file id to use as cloud-init meta-data."
+  default     = null
+}
+
+variable "cloud_init_meta_data_file_name" {
+  type        = string
+  description = "Optional file name for uploaded cloud-init meta-data snippet."
+  default     = null
+}
+
+variable "cloud_init_network_data" {
+  type        = string
+  description = "Cloud-init network-data content. Use file(\"path\") at the callsite to pass a local file."
+  default     = null
+}
+
+variable "cloud_init_network_data_file_id" {
+  type        = string
+  description = "Existing Proxmox snippet file id to use as cloud-init network-data."
+  default     = null
+}
+
+variable "cloud_init_network_data_file_name" {
+  type        = string
+  description = "Optional file name for uploaded cloud-init network-data snippet."
+  default     = null
 }
 
 variable "vm_id" {
@@ -158,12 +229,6 @@ variable "dns_servers" {
 variable "dns_domain" {
   type        = string
   description = "DNS search domain."
-  default     = null
-}
-
-variable "hostname" {
-  type        = string
-  description = "Optional hostname override. Defaults to the logical name."
   default     = null
 }
 
