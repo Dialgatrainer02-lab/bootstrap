@@ -27,6 +27,18 @@ variable "images_datastore_path" {
   default     = null
 }
 
+variable "resource_pool_name" {
+  type        = string
+  description = "Proxmox resource pool ID used to group resources created by this module."
+  default     = null
+}
+
+variable "resource_pool_comment" {
+  type        = string
+  description = "Optional comment for the Proxmox resource pool."
+  default     = null
+}
+
 variable "vm_template_url" {
   type        = string
   description = "URL to download a reusable VM template/boot image into the images datastore."
@@ -101,19 +113,25 @@ variable "local_repo_vm_cpu_cores" {
 variable "local_repo_vm_cpu_type" {
   type        = string
   description = "CPU type for the local repo VM."
-  default     = null
+  default     = "host"
 }
 
 variable "local_repo_vm_memory_mb" {
   type        = number
   description = "Memory for the local repo VM."
-  default     = 2048
+  default     = 4096
 }
 
 variable "local_repo_vm_disk_size_gb" {
   type        = number
   description = "Primary disk size for the local repo VM."
   default     = 20
+}
+
+variable "local_repo_vm_packages_disk_size_gb" {
+  type        = number
+  description = "Secondary disk size for mirrored package storage on the local repo VM."
+  default     = 200
 }
 
 variable "local_repo_vm_network_bridge" {
@@ -145,4 +163,3 @@ variable "local_repo_vm_dns_domain" {
   description = "DNS search domain for the local repo VM."
   default     = null
 }
-

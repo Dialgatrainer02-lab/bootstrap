@@ -22,6 +22,7 @@ locals {
 
   images_datastore_name = coalesce(var.images_datastore_name, local.default_images_datastore_name)
   images_datastore_path = coalesce(var.images_datastore_path, local.default_images_datastore_path)
+  resource_pool_name    = coalesce(var.resource_pool_name, "${var.cluster_name}-pool")
 
   primary_node_name = data.proxmox_virtual_environment_nodes.discovered.names[0]
 }
@@ -52,6 +53,11 @@ resource "proxmox_virtual_environment_download_file" "vm_template" {
   overwrite_unmanaged = var.vm_template_overwrite_unmanaged
 }
 
+resource "proxmox_virtual_environment_pool" "platform" {
+  pool_id = local.resource_pool_name
+  comment = var.resource_pool_comment
+}
+
 module "local_repo_vm" {
   for_each = var.local_repo_vm_enabled ? { this = true } : {}
 
@@ -60,6 +66,7 @@ module "local_repo_vm" {
   name                  = var.local_repo_vm_name
   node_name             = local.primary_node_name
   datastore_id          = coalesce(var.local_repo_vm_datastore_id, module.images.id)
+  pool_id               = proxmox_virtual_environment_pool.platform.pool_id
   snippets_datastore_id = module.snippets.id
   boot_image_id         = proxmox_virtual_environment_download_file.vm_template.id
   boot_image_kind       = var.vm_template_kind
@@ -69,6 +76,7 @@ module "local_repo_vm" {
   cpu_type            = var.local_repo_vm_cpu_type
   memory_mb           = var.local_repo_vm_memory_mb
   disk_size_gb        = var.local_repo_vm_disk_size_gb
+  packages_disk_size_gb = var.local_repo_vm_packages_disk_size_gb
   network_bridge      = var.local_repo_vm_network_bridge
   ipv4_address        = var.local_repo_vm_ipv4_address
   ipv4_gateway        = var.local_repo_vm_ipv4_gateway

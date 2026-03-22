@@ -3,11 +3,38 @@ hostname: ${hostname}
 package_update: true
 package_upgrade: false
 
+users:
+  - name: admin
+    groups: [wheel]
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+%{ if length(ssh_authorized_keys) > 0 ~}
+    ssh_authorized_keys:
+%{ for k in ssh_authorized_keys ~}
+      - ${k}
+%{ endfor ~}
+%{ endif ~}
+output: {all: '| tee -a /var/log/cloud-init-output.log'}
 packages:
   - dnf-plugins-core
   - yum-utils
   - createrepo_c
   - nginx
+
+disk_setup:
+  ${drive_path}:
+    table_type: 'gpt'
+    layout: 
+      - 100
+fs_setup:
+  - label: repos
+    filesystem: ext4
+    device: ${drive_path}
+    partition: none
+    overwrite: false
+
+mounts:
+  - [ "LABEL=repos", "/var/www/html/repos", "ext4", "defaults,nofail", "0", "2" ]
 
 write_files:
   - path: /usr/local/bin/sync-repos.sh
@@ -27,14 +54,13 @@ write_files:
       echo "=== Creating snapshot: $SNAPSHOT_DATE ==="
 
       # Repo layout
-      ALMA_DIR="$SNAPSHOT_DIR/almalinux/9"
-      DOCKER_DIR="$SNAPSHOT_DIR/docker"
-      HASHICORP_DIR="$SNAPSHOT_DIR/hashicorp"
+      ALMA_DIR="$SNAPSHOT_DIR/almalinux/10"
+      EPEL_DIR="$SNAPSHOT_DIR/epel"
 
-      mkdir -p "$ALMA_DIR" "$DOCKER_DIR" "$HASHICORP_DIR"
+      mkdir -p "$ALMA_DIR" "$EPEL_DIR"
 
-      echo "=== Syncing AlmaLinux ==="
-      for repo in baseos appstream extras; do
+      echo "=== Syncing AlmaLinux 10 ==="
+      for repo in baseos appstream extras crb; do
         reposync \
           --repoid=$repo \
           --download-metadata \
@@ -48,29 +74,17 @@ write_files:
         createrepo_c "$ALMA_DIR/$repo"
       done
 
-      echo "=== Syncing Docker ==="
+      echo "=== Syncing EPEL ==="
       reposync \
-        --repoid=docker-ce-stable \
+        --repoid=epel \
         --download-metadata \
         --delete \
         --norepopath \
         --arch=x86_64 \
         --newest-only \
-        -p "$DOCKER_DIR"
+        -p "$EPEL_DIR"
 
-      createrepo_c "$DOCKER_DIR"
-
-      echo "=== Syncing HashiCorp ==="
-      reposync \
-        --repoid=hashicorp \
-        --download-metadata \
-        --delete \
-        --norepopath \
-        --arch=x86_64 \
-        --newest-only \
-        -p "$HASHICORP_DIR"
-
-      createrepo_c "$HASHICORP_DIR"
+      createrepo_c "$EPEL_DIR"
 
       echo "=== Updating current symlink ==="
       ln -sfn "$SNAPSHOT_DIR" "$CURRENT_LINK"
@@ -117,25 +131,24 @@ write_files:
 
 runcmd:
   # Enable base repos
-  - dnf config-manager --set-enabled baseos appstream extras
+  - dnf config-manager --set-enabled baseos appstream extras crb
 
-  # Add upstream repos (for mirroring only)
-  - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
-  - dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  # Enable EPEL repo for mirroring
+  - dnf install -y epel-release
 
-#  #Initial sync
-  # - /usr/local/bin/sync-repos.sh
-# 
-#  #Enable services
-  # - systemctl daemon-reexec
-  # - systemctl enable --now nginx
-  # - systemctl enable --now reposync.timer
-# 
-#  #Firewall (optional)
-  # - |
-    # if systemctl is-active --quiet firewalld; then
-      # firewall-cmd --permanent --add-service=http
-      # firewall-cmd --reload
-    # fi
+  # Initial sync
+  - /usr/local/bin/sync-repos.sh
+
+  # Enable services
+  - systemctl daemon-reexec
+  - systemctl enable --now nginx
+  - systemctl enable --now reposync.timer
+
+  # Firewall (optional)
+  - |
+    if systemctl is-active --quiet firewalld; then
+      firewall-cmd --permanent --add-service=http
+      firewall-cmd --reload
+    fi
 
 final_message: "Mirror ready with snapshots and systemd timer. Use /repos/current/ for clients."

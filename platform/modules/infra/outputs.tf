@@ -24,6 +24,11 @@ output "images_datastore_id" {
   value       = module.images.id
 }
 
+output "resource_pool_id" {
+  description = "Proxmox resource pool ID used to group platform resources."
+  value       = proxmox_virtual_environment_pool.platform.pool_id
+}
+
 output "vm_template_file_id" {
   description = "Proxmox file id of the downloaded VM template/boot image."
   value       = proxmox_virtual_environment_download_file.vm_template.id
