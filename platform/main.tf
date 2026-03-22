@@ -11,18 +11,18 @@ provider "cloudinit" {
 }
 
 provider "random" {
-  
+
 }
 
 module "infra" {
   source = "./modules/infra"
 
-  cluster_name    = var.cluster_name
+  cluster_name = var.cluster_name
 
   providers = {
-    proxmox  = proxmox
-    talos    = talos
+    proxmox   = proxmox
+    talos     = talos
     cloudinit = cloudinit
-    random = random
+    random    = random
   }
 }
