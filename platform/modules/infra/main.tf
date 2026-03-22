@@ -32,6 +32,7 @@ module "snippets" {
 
   name    = local.snippets_datastore_name
   path    = local.snippets_datastore_path
+  pool_id = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
   content = ["snippets"]
 }
 
@@ -41,6 +42,7 @@ module "images" {
   name    = local.images_datastore_name
   path    = local.images_datastore_path
   content = ["iso", "images", "vztmpl"]
+  pool_id = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
 }
 
 resource "proxmox_virtual_environment_download_file" "vm_template" {
@@ -54,6 +56,8 @@ resource "proxmox_virtual_environment_download_file" "vm_template" {
 }
 
 resource "proxmox_virtual_environment_pool" "platform" {
+  count = local.resource_pool_name != null ? 1 : 0
+
   pool_id = local.resource_pool_name
   comment = var.resource_pool_comment
 }
@@ -66,7 +70,7 @@ module "local_repo_vm" {
   name                  = var.local_repo_vm_name
   node_name             = local.primary_node_name
   datastore_id          = coalesce(var.local_repo_vm_datastore_id, module.images.id)
-  pool_id               = proxmox_virtual_environment_pool.platform.pool_id
+  pool_id               = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
   snippets_datastore_id = module.snippets.id
   boot_image_id         = proxmox_virtual_environment_download_file.vm_template.id
   boot_image_kind       = var.vm_template_kind
@@ -74,6 +78,7 @@ module "local_repo_vm" {
   vm_id               = var.local_repo_vm_vm_id
   cpu_cores           = var.local_repo_vm_cpu_cores
   cpu_type            = var.local_repo_vm_cpu_type
+  cpu_flags           = var.local_repo_vm_cpu_flags
   memory_mb           = var.local_repo_vm_memory_mb
   disk_size_gb        = var.local_repo_vm_disk_size_gb
   packages_disk_size_gb = var.local_repo_vm_packages_disk_size_gb

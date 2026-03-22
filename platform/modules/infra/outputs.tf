@@ -26,7 +26,7 @@ output "images_datastore_id" {
 
 output "resource_pool_id" {
   description = "Proxmox resource pool ID used to group platform resources."
-  value       = proxmox_virtual_environment_pool.platform.pool_id
+  value       = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
 }
 
 output "vm_template_file_id" {

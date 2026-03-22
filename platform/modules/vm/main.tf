@@ -27,7 +27,7 @@ locals {
   primary_disk = {
     datastore_id = var.datastore_id
     size_gb      = var.disk_size_gb
-    interface    = "scsi0"
+    interface    = "${var.disk_interface}0"
     file_id      = var.boot_image_kind == "disk" ? local.boot_image_file_id : null
   }
 
@@ -35,7 +35,7 @@ locals {
     for idx, disk in var.extra_disks : {
       datastore_id = coalesce(try(disk.datastore_id, null), var.datastore_id)
       size_gb      = disk.size_gb
-      interface    = coalesce(try(disk.interface, null), "scsi${idx + 1}")
+      interface    = coalesce(try(disk.interface, null), "${var.disk_interface}${idx + 1}")
     }
   ]
 
@@ -144,6 +144,7 @@ resource "proxmox_virtual_environment_vm" "this" {
   cpu {
     cores = var.cpu_cores
     type  = var.cpu_type
+    flags = var.cpu_flags
   }
 
   memory {
@@ -156,6 +157,7 @@ resource "proxmox_virtual_environment_vm" "this" {
       datastore_id = disk.value.datastore_id
       size         = disk.value.size_gb
       interface    = disk.value.interface
+      file_format  = var.disk_file_format
       file_id      = try(disk.value.file_id, null)
     }
   }

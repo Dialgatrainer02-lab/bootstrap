@@ -191,6 +191,12 @@ variable "cpu_type" {
   default     = "host"
 }
 
+variable "cpu_flags" {
+  type        = list(string)
+  description = "Optional list of CPU flags to expose to the guest."
+  default     = []
+}
+
 variable "memory_mb" {
   type        = number
   description = "Dedicated memory in MB."
@@ -201,6 +207,28 @@ variable "disk_size_gb" {
   type        = number
   description = "Primary disk size in GB."
   default     = 20
+}
+
+variable "disk_interface" {
+  type        = string
+  description = "Disk bus type used for primary and default extra disks (ide, sata, scsi, virtio)."
+  default     = "scsi"
+
+  validation {
+    condition     = contains(["ide", "sata", "scsi", "virtio"], var.disk_interface)
+    error_message = "disk_interface must be one of: ide, sata, scsi, virtio."
+  }
+}
+
+variable "disk_file_format" {
+  type        = string
+  description = "Disk image format for VM disks."
+  default     = "raw"
+
+  validation {
+    condition     = contains(["raw", "qcow2", "vmdk"], var.disk_file_format)
+    error_message = "disk_file_format must be one of: raw, qcow2, vmdk."
+  }
 }
 
 variable "extra_disks" {
