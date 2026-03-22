@@ -78,6 +78,12 @@ variable "machine" {
   default     = "q35"
 }
 
+variable "bios" {
+  type        = string
+  description = "vm bios tytpe"
+  default     = "ovmf"
+}
+
 variable "efi_disk_type" {
   type        = string
   description = "EFI disk type/size."

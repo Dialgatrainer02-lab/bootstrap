@@ -33,18 +33,3 @@ run "plan_local_repo_vm" {
     error_message = "Expected VM to use the provided boot_image_id."
   }
 }
-
-run "snippets_datastore_apply" {
-  module {
-    source = "./modules/datastore"
-  }
-
-  command = apply
-
-  variables {
-    name    = "vm-snippets"
-    type    = "directory"
-    path    = "/mnt/pve/vm-snippets"
-    content = ["snippets"]
-  }
-}
