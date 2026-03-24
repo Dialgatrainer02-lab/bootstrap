@@ -5,7 +5,7 @@ provider "proxmox" {
 
 run "plan_local_repo_vm" {
   module {
-    source = "./modules/local_repo_vm"
+    source = "./modules/local_mirror"
   }
 
   command = plan

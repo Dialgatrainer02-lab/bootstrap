@@ -1,0 +1,133 @@
+#cloud-config
+hostname: ${hostname}
+package_update: false
+package_upgrade: false
+
+users:
+  - name: admin
+    groups: [wheel]
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+%{ if length(ssh_authorized_keys) > 0 ~}
+    ssh_authorized_keys:
+%{ for k in ssh_authorized_keys ~}
+      - ${k}
+%{ endfor ~}
+%{ endif ~}
+output: {all: '| tee -a /var/log/cloud-init-output.log'}
+
+write_files:
+  - path: /etc/yum.repos.d/local-almalinux.repo
+    permissions: '0644'
+    content: |
+      [local-baseos]
+      name=Local AlmaLinux 10 - BaseOS
+      baseurl=${mirror_base_url}/almalinux/10/baseos
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+
+      [local-appstream]
+      name=Local AlmaLinux 10 - AppStream
+      baseurl=${mirror_base_url}/almalinux/10/appstream
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+
+      [local-extras]
+      name=Local AlmaLinux 10 - Extras
+      baseurl=${mirror_base_url}/almalinux/10/extras
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+
+      [local-crb]
+      name=Local AlmaLinux 10 - CRB
+      baseurl=${mirror_base_url}/almalinux/10/crb
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+
+  - path: /etc/yum.repos.d/local-third-party.repo
+    permissions: '0644'
+    content: |
+      [local-epel]
+      name=Local EPEL
+      baseurl=${mirror_base_url}/epel
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+
+      [local-docker-ce-stable]
+      name=Local Docker CE Stable
+      baseurl=${mirror_base_url}/docker
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+
+      [local-vector]
+      name=Local Vector
+      baseurl=${mirror_base_url}/vector
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+
+      [local-openbao]
+      name=Local OpenBao
+      baseurl=${mirror_base_url}/openbao
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+
+  - path: /etc/openbao/openbao.hcl
+    permissions: '0640'
+    content: |
+      ui = true
+      disable_mlock = true
+
+      api_addr = "http://${openbao_api_addr}:8200"
+      cluster_addr = "http://${openbao_cluster_addr}:8201"
+
+      listener "tcp" {
+        tls_disable = 1
+        address = "[::]:8200"
+        cluster_address = "[::]:8201"
+      }
+
+      storage "raft" {
+        path = "${openbao_raft_data_dir}"
+        node_id = "${openbao_raft_node_id}"
+      }
+
+  - path: /etc/systemd/system/openbao.service.d/override.conf
+    permissions: '0644'
+    content: |
+      [Service]
+      ExecStart=
+      ExecStart=/usr/bin/openbao server -config=/etc/openbao/openbao.hcl
+
+runcmd:
+  - set -euo pipefail
+  - rm -f /etc/yum.repos.d/almalinux*.repo
+  - rm -f /etc/yum.repos.d/epel*.repo
+  - rm -f /etc/yum.repos.d/docker*.repo
+  - rm -f /etc/yum.repos.d/vector*.repo
+
+  - dnf clean all
+  - dnf makecache
+  - dnf install -y openbao
+
+  - mkdir -p ${openbao_raft_data_dir}
+  - chown -R openbao:openbao /etc/openbao ${openbao_raft_data_dir}
+
+  - systemctl daemon-reload
+  - systemctl enable --now openbao
+
+  - |
+    if systemctl is-active --quiet firewalld; then
+      firewall-cmd --permanent --add-port=8200/tcp
+      firewall-cmd --permanent --add-port=8201/tcp
+      firewall-cmd --reload
+    fi
+
+final_message: "OpenBao installed and started with config /etc/openbao/openbao.hcl"

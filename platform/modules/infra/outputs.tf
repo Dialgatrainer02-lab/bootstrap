@@ -3,7 +3,6 @@ output "cluster_name" {
   value       = var.cluster_name
 }
 
-
 output "discovered_nodes" {
   description = "Raw node data discovered from the Proxmox provider."
   value       = data.proxmox_virtual_environment_nodes.discovered
@@ -29,22 +28,52 @@ output "resource_pool_id" {
   value       = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
 }
 
+output "local_mirror_health_check_url" {
+  description = "HTTP URL used by the local mirror VM health check."
+  value       = local.local_mirror_enabled ? "http://${local.local_mirror_health_check_ip}/repos/current/" : null
+}
+
 output "vm_template_file_id" {
   description = "Proxmox file id of the downloaded VM template/boot image."
   value       = proxmox_virtual_environment_download_file.vm_template.id
 }
 
-output "local_repo_vm_id" {
-  description = "VM resource id for the local repo VM (if enabled)."
-  value       = try(module.local_repo_vm["this"].id, null)
+output "local_mirror_id" {
+  description = "VM resource id for the local mirror VM (if enabled)."
+  value       = try(module.local_mirror["this"].id, null)
 }
 
-output "local_repo_vm_vm_id" {
-  description = "VM id for the local repo VM (if enabled)."
-  value       = try(module.local_repo_vm["this"].vm_id, null)
+output "local_mirror_vm_id" {
+  description = "VM id for the local mirror VM (if enabled)."
+  value       = try(module.local_mirror["this"].vm_id, null)
 }
 
-output "local_repo_vm_cloud_init_user_data_file_id" {
-  description = "Proxmox snippet file id for the local repo VM user-data (if enabled)."
-  value       = try(module.local_repo_vm["this"].cloud_init_user_data_file_id, null)
+output "local_mirror_cloud_init_user_data_file_id" {
+  description = "Proxmox snippet file id for the local mirror VM user-data (if enabled)."
+  value       = try(module.local_mirror["this"].cloud_init_user_data_file_id, null)
+}
+
+output "local_mirror_ipv4_address" {
+  description = "Derived IPv4 CIDR address used by the local mirror service VM."
+  value       = local.local_mirror_enabled ? local.local_mirror_ipv4_address : null
+}
+
+output "openbao_id" {
+  description = "VM resource id for the openbao VM (if enabled)."
+  value       = try(module.openbao["this"].id, null)
+}
+
+output "openbao_vm_id" {
+  description = "VM id for the openbao VM (if enabled)."
+  value       = try(module.openbao["this"].vm_id, null)
+}
+
+output "openbao_cloud_init_user_data_file_id" {
+  description = "Proxmox snippet file id for the openbao VM user-data (if enabled)."
+  value       = try(module.openbao["this"].cloud_init_user_data_file_id, null)
+}
+
+output "openbao_ipv4_address" {
+  description = "Derived IPv4 CIDR address used by the openbao service VM."
+  value       = local.local_mirror_enabled && local.openbao_enabled ? local.openbao_ipv4_address : null
 }

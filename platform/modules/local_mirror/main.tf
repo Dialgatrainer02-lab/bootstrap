@@ -4,8 +4,8 @@ locals {
     templatefile("${path.module}/cloud-init.yaml.tftpl", {
       hostname            = var.name
       ssh_authorized_keys = local.authorized_keys
-      drive_path          = "/dev/sdb"
-      sync_repos_script   = file("${path.module}/sync-repos.sh")
+      repo_disk_device    = var.repo_disk_device
+      repo_disk_size_gb   = var.packages_disk_size_gb
     }),
   )
 }
