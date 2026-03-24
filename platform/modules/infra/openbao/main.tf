@@ -1,54 +1,71 @@
+locals {
+  openbao_advertise_ip = var.ipv4_address != "dhcp" ? regexreplace(var.ipv4_address, "/[0-9]+$", "") : var.name
 
-# module "openbao_data" {
-# source = "../datastore"
-# 
-# name = "openbao_data"
-# path = "/var/lib/openbao-data"
-# content = ["snippets"]
-# }
-# 
-# 
-# resource "proxmox_virtual_environment_file" "openbao_config" {
-# content_type = "snippets"
-# datastore_id = module.openbao_data.id
-# node_name = data.proxmox_virtual_environment_nodes.discovered.names[0]
-# source_file {
-# path = "${path.module}/openbao/config.hcl"
-# }
-# }
-# 
-# 
-# resource "random_bytes" "openbao_key" {
-# length = 32
-# }
-# resource "proxmox_virtual_environment_file" "openbao_seal" {
-# content_type = "snippets"
-# datastore_id = module.openbao_data.id
-# node_name = data.proxmox_virtual_environment_nodes.discovered.names[0]
-# source_raw {
-# file_name = "test-1.key"
-# data = random_bytes.openbao_key.base64
-# }
-# }
-# 
-# output "name" {
-# value = proxmox_virtual_environment_file.openbao_config
-# }
-# 
-# module "openbao" {
-# source = "../oci_container"
-# 
-# node_name = data.proxmox_virtual_environment_nodes.discovered.names[0]
-# datastore_id = "local-zfs"
-# image_datastore_id = "local"
-# name = "openbao"
-# image_ref = "docker.io/openbao/openbao:latest"
-# dns_servers = ["1.1.1.1"]
-# mount_points = [
-# {
-# path = "/openbao/config"
-# volume = "/mnt/bindmounts/openbao"
-# }
-# ]
-# 
-# }
+  rendered_user_data = coalesce(
+    var.cloud_init_user_data,
+    templatefile("${path.module}/cloud-init.yaml.tftpl", {
+      hostname              = var.name
+      ssh_authorized_keys   = local.authorized_keys
+      mirror_base_url       = var.mirror_base_url
+      openbao_api_addr      = local.openbao_advertise_ip
+      openbao_cluster_addr  = local.openbao_advertise_ip
+      openbao_raft_node_id  = var.name
+      openbao_raft_data_dir = var.openbao_raft_data_dir
+    }),
+  )
+}
+
+locals {
+  authorized_keys = distinct(concat(
+    var.ssh_authorized_keys,
+    [trimspace(tls_private_key.openbao_vm_ssh.public_key_openssh)],
+  ))
+}
+
+resource "tls_private_key" "openbao_vm_ssh" {
+  algorithm = "ED25519"
+}
+
+resource "local_sensitive_file" "openbao_vm_ssh_private_key" {
+  filename        = "${path.root}/keys/openbao"
+  content         = tls_private_key.openbao_vm_ssh.private_key_openssh
+  file_permission = "0600"
+}
+
+resource "proxmox_virtual_environment_file" "cloud_init_user_data" {
+  content_type = "snippets"
+  datastore_id = var.snippets_datastore_id
+  node_name    = var.node_name
+
+  source_raw {
+    file_name = "${var.name}-user-data.yaml"
+    data      = local.rendered_user_data
+  }
+}
+
+module "vm" {
+  source = "../../vm"
+
+  name         = var.name
+  node_name    = var.node_name
+  datastore_id = var.datastore_id
+  pool_id      = var.pool_id
+
+  vm_id     = var.vm_id
+  cpu_cores = var.cpu_cores
+  cpu_type  = var.cpu_type
+  cpu_flags = var.cpu_flags
+  memory_mb = var.memory_mb
+
+  disk_size_gb    = var.disk_size_gb
+  network_bridge  = var.network_bridge
+  ipv4_address    = var.ipv4_address
+  ipv4_gateway    = var.ipv4_gateway
+  dns_servers     = var.dns_servers
+  dns_domain      = var.dns_domain
+  tags            = var.tags
+  boot_image_id   = var.boot_image_id
+  boot_image_kind = var.boot_image_kind
+
+  cloud_init_user_data_file_id = proxmox_virtual_environment_file.cloud_init_user_data.id
+}

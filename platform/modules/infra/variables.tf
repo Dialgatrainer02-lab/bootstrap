@@ -51,121 +51,41 @@ variable "vm_template_file_name" {
   default     = "AlmaLinux-10-GenericCloud-latest.x86_64.qcow2.img"
 }
 
-variable "vm_template_content_type" {
-  type        = string
-  description = "Proxmox content type for the downloaded VM template/boot image."
-  default     = "iso"
+variable "service_feature_gates" {
+  type        = map(bool)
+  description = "Feature gates for service VMs managed by infra (supported keys: local_mirror, openbao)."
+  default     = {}
 }
 
-variable "vm_template_kind" {
+variable "service_network_subnet_cidr" {
   type        = string
-  description = "How the downloaded vm_template_file_id should be used by default."
-  default     = "disk"
+  description = "IPv4 subnet CIDR used for service VM addresses (for example 192.168.0.0/24)."
 
   validation {
-    condition     = contains(["iso", "disk"], var.vm_template_kind)
-    error_message = "vm_template_kind must be one of: iso, disk."
+    condition     = can(cidrhost(var.service_network_subnet_cidr, 1))
+    error_message = "service_network_subnet_cidr must be a valid CIDR block."
   }
 }
 
-variable "vm_template_overwrite" {
-  type        = bool
-  description = "If true, replace the template when the size has changed."
-  default     = true
-}
-
-variable "vm_template_overwrite_unmanaged" {
-  type        = bool
-  description = "If true, replace an existing unmanaged template with the same name."
-  default     = false
-}
-
-variable "local_repo_vm_enabled" {
-  type        = bool
-  description = "If true, create the local repo VM via the local_repo_vm module."
-  default     = false
-}
-
-variable "local_repo_vm_name" {
+variable "service_network_gateway" {
   type        = string
-  description = "VM name for the local repo VM."
-  default     = "local-repo"
+  description = "IPv4 gateway used by service VMs."
 }
 
-variable "local_repo_vm_vm_id" {
-  type        = number
-  description = "Optional explicit VM ID for the local repo VM."
-  default     = null
-}
-
-variable "local_repo_vm_datastore_id" {
+variable "service_network_bridge" {
   type        = string
-  description = "Datastore for the local repo VM disks. Defaults to the images datastore when unset."
-  default     = null
-}
-
-variable "local_repo_vm_cpu_cores" {
-  type        = number
-  description = "CPU cores for the local repo VM."
-  default     = 2
-}
-
-variable "local_repo_vm_cpu_type" {
-  type        = string
-  description = "CPU type for the local repo VM."
-  default     = "host"
-}
-
-variable "local_repo_vm_cpu_flags" {
-  type        = list(string)
-  description = "Optional CPU flags for the local repo VM."
-  default     = []
-}
-
-variable "local_repo_vm_memory_mb" {
-  type        = number
-  description = "Memory for the local repo VM."
-  default     = 4096
-}
-
-variable "local_repo_vm_disk_size_gb" {
-  type        = number
-  description = "Primary disk size for the local repo VM."
-  default     = 20
-}
-
-variable "local_repo_vm_packages_disk_size_gb" {
-  type        = number
-  description = "Secondary disk size for mirrored package storage on the local repo VM."
-  default     = 200
-}
-
-variable "local_repo_vm_network_bridge" {
-  type        = string
-  description = "Bridge for the local repo VM."
+  description = "Bridge used by service VMs."
   default     = "vmbr0"
 }
 
-variable "local_repo_vm_ipv4_address" {
-  type        = string
-  description = "IPv4 address or 'dhcp' for the local repo VM."
-  default     = "dhcp"
-}
-
-variable "local_repo_vm_ipv4_gateway" {
-  type        = string
-  description = "IPv4 gateway for the local repo VM."
-  default     = null
-}
-
-variable "local_repo_vm_dns_servers" {
+variable "service_dns_servers" {
   type        = list(string)
-  description = "DNS servers for the local repo VM."
+  description = "DNS servers used by service VMs."
   default     = []
 }
 
-variable "local_repo_vm_dns_domain" {
+variable "service_dns_domain" {
   type        = string
-  description = "DNS search domain for the local repo VM."
+  description = "DNS search domain used by service VMs."
   default     = null
 }

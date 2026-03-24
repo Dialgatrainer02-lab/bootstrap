@@ -1,14 +1,15 @@
-
 # Auto-discover available Proxmox nodes for downstream modules.
 data "proxmox_virtual_environment_nodes" "discovered" {}
 
-# Boilerplate module for Proxmox + Talos + Cloud-Init.
-# Add resources here once you define your node schema.
+moved {
+  from = module.local_repo_vm["this"]
+  to   = module.local_mirror["this"]
+}
 
-# Example layout guidance:
-# - Proxmox VM resources (bpg/proxmox)
-# - cloud-init user-data templates (hashicorp/cloudinit)
-# - Talos machine config + apply steps (siderolabs/talos)
+moved {
+  from = terraform_data.local_repo_vm_health_check[0]
+  to   = terraform_data.local_mirror_health_check[0]
+}
 
 locals {
   default_snippets_datastore_name = "${var.cluster_name}-snippets"
@@ -25,6 +26,28 @@ locals {
   resource_pool_name    = coalesce(var.resource_pool_name, "${var.cluster_name}-pool")
 
   primary_node_name = data.proxmox_virtual_environment_nodes.discovered.names[0]
+
+  service_feature_gates = merge({
+    local_mirror = true
+    openbao      = false
+  }, var.service_feature_gates)
+
+  local_mirror_enabled = lookup(local.service_feature_gates, "local_mirror", false)
+  openbao_enabled      = lookup(local.service_feature_gates, "openbao", false)
+
+  service_subnet_prefix = split("/", var.service_network_subnet_cidr)[1]
+
+  local_mirror_ip              = cidrhost(var.service_network_subnet_cidr, 50)
+  local_mirror_ipv4_address    = "${local.local_mirror_ip}/${local.service_subnet_prefix}"
+  local_mirror_health_check_ip = local.local_mirror_ip
+
+  openbao_ip           = cidrhost(var.service_network_subnet_cidr, 51)
+  openbao_ipv4_address = "${local.openbao_ip}/${local.service_subnet_prefix}"
+
+  local_mirror_name = "${var.cluster_name}-local-mirror"
+  openbao_name      = "${var.cluster_name}-openbao"
+
+  local_mirror_base_url = "http://${local.local_mirror_ip}/repos/current"
 }
 
 module "snippets" {
@@ -48,11 +71,11 @@ module "images" {
 resource "proxmox_virtual_environment_download_file" "vm_template" {
   node_name           = local.primary_node_name
   datastore_id        = module.images.id
-  content_type        = var.vm_template_content_type
+  content_type        = "iso"
   url                 = var.vm_template_url
   file_name           = var.vm_template_file_name
-  overwrite           = var.vm_template_overwrite
-  overwrite_unmanaged = var.vm_template_overwrite_unmanaged
+  overwrite           = true
+  overwrite_unmanaged = false
 }
 
 resource "proxmox_virtual_environment_pool" "platform" {
@@ -62,29 +85,76 @@ resource "proxmox_virtual_environment_pool" "platform" {
   comment = var.resource_pool_comment
 }
 
-module "local_repo_vm" {
-  for_each = var.local_repo_vm_enabled ? { this = true } : {}
+module "local_mirror" {
+  for_each = local.local_mirror_enabled ? { this = true } : {}
 
-  source = "../local_repo_vm"
+  source = "../local_mirror"
 
-  name                  = var.local_repo_vm_name
+  name                  = local.local_mirror_name
   node_name             = local.primary_node_name
-  datastore_id          = coalesce(var.local_repo_vm_datastore_id, module.images.id)
+  datastore_id          = module.images.id
   pool_id               = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
   snippets_datastore_id = module.snippets.id
   boot_image_id         = proxmox_virtual_environment_download_file.vm_template.id
-  boot_image_kind       = var.vm_template_kind
+  boot_image_kind       = "disk"
 
-  vm_id               = var.local_repo_vm_vm_id
-  cpu_cores           = var.local_repo_vm_cpu_cores
-  cpu_type            = var.local_repo_vm_cpu_type
-  cpu_flags           = var.local_repo_vm_cpu_flags
-  memory_mb           = var.local_repo_vm_memory_mb
-  disk_size_gb        = var.local_repo_vm_disk_size_gb
-  packages_disk_size_gb = var.local_repo_vm_packages_disk_size_gb
-  network_bridge      = var.local_repo_vm_network_bridge
-  ipv4_address        = var.local_repo_vm_ipv4_address
-  ipv4_gateway        = var.local_repo_vm_ipv4_gateway
-  dns_servers         = var.local_repo_vm_dns_servers
-  dns_domain          = var.local_repo_vm_dns_domain
+  cpu_cores             = 2
+  cpu_type              = "host"
+  cpu_flags             = []
+  memory_mb             = 4096
+  disk_size_gb          = 20
+  packages_disk_size_gb = 100
+  repo_disk_device      = null
+  network_bridge        = var.service_network_bridge
+  ipv4_address          = local.local_mirror_ipv4_address
+  ipv4_gateway          = var.service_network_gateway
+  dns_servers           = var.service_dns_servers
+  dns_domain            = var.service_dns_domain
+  tags                  = ["service", "local-mirror", var.cluster_name]
+}
+
+# resource "terraform_data" "local_mirror_health_check" {
+  # count = local.local_mirror_enabled ? 1 : 0
+# 
+  # triggers_replace = {
+    # ip    = local.local_mirror_health_check_ip
+    # path  = "/repos/current/"
+    # vm_id = tostring(try(module.local_mirror["this"].vm_id, ""))
+  # }
+# 
+  # depends_on = [module.local_mirror]
+# 
+  # provisioner "local-exec" {
+    # command = <<-EOT
+      # bash -lc 'for i in $$(seq 1 30); do curl -fsS "http://${local.local_mirror_health_check_ip}/repos/current/" >/dev/null && exit 0; sleep 10; done; echo "Repository health check failed: http://${local.local_mirror_health_check_ip}/repos/current/" >&2; exit 1'
+    # EOT
+  # }
+# }
+
+module "openbao" {
+  for_each = local.local_mirror_enabled && local.openbao_enabled ? { this = true } : {}
+
+  source = "./openbao"
+
+  name                  = local.openbao_name
+  node_name             = local.primary_node_name
+  datastore_id          = module.images.id
+  pool_id               = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
+  snippets_datastore_id = module.snippets.id
+  boot_image_id         = proxmox_virtual_environment_download_file.vm_template.id
+  boot_image_kind       = "disk"
+
+  cpu_cores      = 2
+  cpu_type       = "host"
+  cpu_flags      = []
+  memory_mb      = 4096
+  disk_size_gb   = 40
+  network_bridge = var.service_network_bridge
+  ipv4_address   = local.openbao_ipv4_address
+  ipv4_gateway   = var.service_network_gateway
+  dns_servers    = var.service_dns_servers
+  dns_domain     = var.service_dns_domain
+  tags           = ["service", "openbao", var.cluster_name]
+
+  mirror_base_url = local.local_mirror_base_url
 }

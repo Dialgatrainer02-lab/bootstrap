@@ -15,12 +15,12 @@ variable "datastore_id" {
 
 variable "snippets_datastore_id" {
   type        = string
-  description = "Datastore to store cloud-init snippets (content_type=snippets). Typically provided by the infra module."
+  description = "Datastore to store cloud-init snippets (content_type=snippets)."
 }
 
 variable "boot_image_id" {
   type        = string
-  description = "Boot image/template file id to use for the VM (typically downloaded by the infra module)."
+  description = "Boot image/template file id to use for the VM."
 }
 
 variable "boot_image_kind" {
@@ -76,12 +76,6 @@ variable "disk_size_gb" {
   default     = 20
 }
 
-variable "packages_disk_size_gb" {
-  type        = number
-  description = "Size in GB of the secondary disk used to store mirrored packages."
-  default     = 100
-}
-
 variable "network_bridge" {
   type        = string
   description = "Bridge name for the primary network device."
@@ -128,4 +122,15 @@ variable "tags" {
   type        = list(string)
   description = "Tags applied to the VM."
   default     = []
+}
+
+variable "mirror_base_url" {
+  type        = string
+  description = "Base URL for mirrored repositories, typically ending with /repos/current."
+}
+
+variable "openbao_raft_data_dir" {
+  type        = string
+  description = "OpenBao raft storage path inside the VM."
+  default     = "/var/lib/openbao"
 }
