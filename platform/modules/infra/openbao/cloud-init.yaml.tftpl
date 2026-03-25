@@ -72,18 +72,11 @@ write_files:
       gpgcheck=0
       repo_gpgcheck=0
 
-      [local-openbao]
-      name=Local OpenBao
-      baseurl=${mirror_base_url}/openbao
-      enabled=1
-      gpgcheck=0
-      repo_gpgcheck=0
 
   - path: /etc/openbao/openbao.hcl
     permissions: '0640'
     content: |
       ui = true
-      disable_mlock = true
 
       api_addr = "http://${openbao_api_addr}:8200"
       cluster_addr = "http://${openbao_cluster_addr}:8201"
@@ -99,12 +92,57 @@ write_files:
         node_id = "${openbao_raft_node_id}"
       }
 
+      seal "static" {
+        current_key_id = "key-0"
+        current_key = "file:///etc/openbao/key-0"
+      }
+
+      initialize "policy" {
+        request "add-superuser-policy" {
+          operation = "update"
+          path = "sys/policies/acl/superuser"
+          data = {
+            policy = <<EOP
+              path "*" {
+                capabilities = ["create", "update", "read", "delete", "list", "scan", "sudo"]
+              }
+              EOP
+          }
+        }
+      }
+
+      initialize "identity" {
+        request "mount-userpass" {
+          operation = "update"
+          path = "sys/auth/userpass"
+          data = {
+            type = "userpass"
+            description = "admin"
+          }
+        }
+  
+        request "userpass-add-admin" {
+          operation = "update"
+          path = "auth/userpass/users/admin"
+          data = {
+            password = "${openbao_initial_admin_password}"
+            "policies" = ["superuser"]
+          }
+        }
+      }
+
+
+  - path: /etc/openbao/key-0
+    permissions: '0600'
+    encoding: b64
+    content: ${openbao_key_0}
+
   - path: /etc/systemd/system/openbao.service.d/override.conf
     permissions: '0644'
     content: |
       [Service]
       ExecStart=
-      ExecStart=/usr/bin/openbao server -config=/etc/openbao/openbao.hcl
+      ExecStart=/usr/bin/bao server -config=/etc/openbao/openbao.hcl
 
 runcmd:
   - set -euo pipefail
