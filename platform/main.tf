@@ -21,9 +21,9 @@ provider "tls" {
 provider "local" {}
 
 provider "vault" {
-  address         = module.infra.openbao_api_address
-  skip_tls_verify = true
-  skip_get_vault_version = true
+  address                = module.infra.openbao_api_address
+  skip_tls_verify        = true
+  vault_version_override = "1.11.0"
 
   auth_login_userpass {
     username = module.infra.openbao_admin_username
