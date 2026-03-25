@@ -40,9 +40,51 @@ locals {
       "Example Labs Intermediate CA v1.1"
   EOT
 
-  external_ca_csr_file_path = startswith(var.external_ca_csr_file_path, "/") ? var.external_ca_csr_file_path : "${path.root}/${var.external_ca_csr_file_path}"
+  external_ca_csr_file_path = startswith(var.external_ca_csr_file_path, "/") ? var.external_ca_csr_file_path : "${path.root}/root/${trimprefix(trimprefix(var.external_ca_csr_file_path, "./"), "root/")}"
 
-  external_ca_signed_intermediate_file_path = startswith(var.external_ca_signed_intermediate_file_path, "/") ? var.external_ca_signed_intermediate_file_path : "${path.root}/${var.external_ca_signed_intermediate_file_path}"
+  external_ca_signed_intermediate_file_path = startswith(var.external_ca_signed_intermediate_file_path, "/") ? var.external_ca_signed_intermediate_file_path : "${path.root}/root/${trimprefix(trimprefix(var.external_ca_signed_intermediate_file_path, "./"), "root/")}"
+
+  pki_cluster_base_url = coalesce(var.pki_cluster_base_url, var.pki_api_base_url)
+}
+
+resource "vault_pki_secret_backend_config_urls" "pki_int" {
+  backend = vault_mount.pki_int.path
+
+  issuing_certificates = [
+    "${var.pki_api_base_url}/v1/${vault_mount.pki_int.path}/ca",
+  ]
+  crl_distribution_points = [
+    "${var.pki_api_base_url}/v1/${vault_mount.pki_int.path}/crl",
+  ]
+  ocsp_servers = [
+    "${var.pki_api_base_url}/v1/${vault_mount.pki_int.path}/ocsp",
+  ]
+}
+
+resource "vault_pki_secret_backend_config_cluster" "pki_int" {
+  backend  = vault_mount.pki_int.path
+  path     = "${local.pki_cluster_base_url}/v1/${vault_mount.pki_int.path}"
+  aia_path = "${var.pki_api_base_url}/v1/${vault_mount.pki_int.path}"
+}
+
+resource "vault_pki_secret_backend_config_urls" "pki_iss" {
+  backend = vault_mount.pki_iss.path
+
+  issuing_certificates = [
+    "${var.pki_api_base_url}/v1/${vault_mount.pki_iss.path}/ca",
+  ]
+  crl_distribution_points = [
+    "${var.pki_api_base_url}/v1/${vault_mount.pki_iss.path}/crl",
+  ]
+  ocsp_servers = [
+    "${var.pki_api_base_url}/v1/${vault_mount.pki_iss.path}/ocsp",
+  ]
+}
+
+resource "vault_pki_secret_backend_config_cluster" "pki_iss" {
+  backend  = vault_mount.pki_iss.path
+  path     = "${local.pki_cluster_base_url}/v1/${vault_mount.pki_iss.path}"
+  aia_path = "${var.pki_api_base_url}/v1/${vault_mount.pki_iss.path}"
 }
 
 module "issuer_v1_1" {
@@ -61,7 +103,11 @@ module "issuer_v1_1" {
   csr_file_path                 = local.external_ca_csr_file_path
   signed_intermediate_file_path = local.external_ca_signed_intermediate_file_path
 
-  depends_on = [vault_mount.pki_int]
+  depends_on = [
+    vault_mount.pki_int,
+    vault_pki_secret_backend_config_urls.pki_int,
+    vault_pki_secret_backend_config_cluster.pki_int,
+  ]
 }
 # 
 
@@ -69,8 +115,8 @@ module "issuer_v1_1" {
 module "issuer_v1_1_1" {
   source = "./internal_ca"
   issuer = {
-    backend          = "pki_iss"
-    parent_backend   = "pki_int"
+    backend          = vault_mount.pki_iss.path
+    parent_backend   = vault_mount.pki_int.path
     parent_issuer    = module.issuer_v1_1.issuer_id
     name             = "test"
     organization     = "Example"
@@ -78,5 +124,10 @@ module "issuer_v1_1_1" {
     key_type         = "ec"
     key_bits         = 256
   }
-  depends_on = [vault_mount.pki_iss, module.issuer_v1_1]
+  depends_on = [
+    vault_mount.pki_iss,
+    vault_pki_secret_backend_config_urls.pki_iss,
+    vault_pki_secret_backend_config_cluster.pki_iss,
+    module.issuer_v1_1,
+  ]
 }

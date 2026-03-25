@@ -23,7 +23,7 @@ provider "local" {}
 provider "vault" {
   address                = module.infra.openbao_api_address
   skip_tls_verify        = true
-  vault_version_override = "1.11.0"
+  vault_version_override = "1.13.0"
 
   auth_login_userpass {
     username = module.infra.openbao_admin_username
@@ -43,6 +43,7 @@ module "infra" {
 
   service_network_subnet_cidr = "192.168.0.0/24"
   service_network_gateway     = "192.168.0.1"
+  service_dns_domain          = var.service_dns_domain
 
   providers = {
     proxmox   = proxmox

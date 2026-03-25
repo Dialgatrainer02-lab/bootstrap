@@ -1,7 +1,7 @@
 locals {
-  csr_file_path = startswith(var.csr_file_path, "/") ? var.csr_file_path : "${path.root}/${var.csr_file_path}"
+  csr_file_path = startswith(var.csr_file_path, "/") ? var.csr_file_path : "${path.root}/root/${trimprefix(trimprefix(var.csr_file_path, "./"), "root/")}"
 
-  signed_intermediate_file_path = startswith(var.signed_intermediate_file_path, "/") ? var.signed_intermediate_file_path : "${path.root}/${var.signed_intermediate_file_path}"
+  signed_intermediate_file_path = startswith(var.signed_intermediate_file_path, "/") ? var.signed_intermediate_file_path : "${path.root}/root/${trimprefix(trimprefix(var.signed_intermediate_file_path, "./"), "root/")}"
 }
 
 resource "terraform_data" "prepare_paths" {
@@ -11,7 +11,8 @@ resource "terraform_data" "prepare_paths" {
   }
 
   provisioner "local-exec" {
-    command = "mkdir -p \"${dirname(local.csr_file_path)}\" \"${dirname(local.signed_intermediate_file_path)}\""
+    command    = "mkdir -p \"${dirname(local.csr_file_path)}\" \"${dirname(local.signed_intermediate_file_path)}\""
+    on_failure = fail
   }
 }
 
@@ -52,7 +53,13 @@ resource "terraform_data" "sign_intermediate" {
 
   provisioner "local-exec" {
     interpreter = ["/bin/bash", "-lc"]
-    command     = var.signer_command
+    command     = <<-EOT
+      set -euo pipefail
+      rm -f "$SIGNED_CERT_FILE"
+      ${var.signer_command}
+      test -s "$SIGNED_CERT_FILE"
+    EOT
+    on_failure  = fail
     environment = {
       CSR_FILE         = local.csr_file_path
       SIGNED_CERT_FILE = local.signed_intermediate_file_path
@@ -80,4 +87,11 @@ resource "vault_pki_secret_backend_issuer" "this" {
   backend     = var.issuer.backend
   issuer_ref  = vault_pki_secret_backend_intermediate_set_signed.this.imported_issuers[0]
   issuer_name = var.issuer.name
+
+  lifecycle {
+    replace_triggered_by = [
+      vault_pki_secret_backend_key.this,
+      vault_pki_secret_backend_intermediate_set_signed.this,
+    ]
+  }
 }

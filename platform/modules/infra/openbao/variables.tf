@@ -129,6 +129,11 @@ variable "mirror_base_url" {
   description = "Base URL for mirrored repositories, typically ending with /repos/current."
 }
 
+variable "local_mirror_service_ip" {
+  type        = string
+  description = "IPv4 address used to map the local mirror hostname in /etc/hosts."
+}
+
 variable "openbao_raft_data_dir" {
   type        = string
   description = "OpenBao raft storage path inside the VM."
