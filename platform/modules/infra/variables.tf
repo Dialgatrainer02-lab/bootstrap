@@ -53,7 +53,7 @@ variable "vm_template_file_name" {
 
 variable "service_feature_gates" {
   type        = map(bool)
-  description = "Feature gates for service VMs managed by infra (supported keys: local_mirror, openbao)."
+  description = "Feature gates for service VMs managed by infra (supported keys: local_mirror, openbao, local_registry)."
   default     = {}
 }
 

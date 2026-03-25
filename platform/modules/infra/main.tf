@@ -19,12 +19,14 @@ locals {
   primary_node_name = data.proxmox_virtual_environment_nodes.discovered.names[0]
 
   service_feature_gates = merge({
-    local_mirror = true
-    openbao      = false
+    local_mirror   = true
+    openbao        = false
+    local_registry = false
   }, var.service_feature_gates)
 
-  local_mirror_enabled = lookup(local.service_feature_gates, "local_mirror", false)
-  openbao_enabled      = lookup(local.service_feature_gates, "openbao", false)
+  local_mirror_enabled   = lookup(local.service_feature_gates, "local_mirror", false)
+  openbao_enabled        = lookup(local.service_feature_gates, "openbao", false)
+  local_registry_enabled = lookup(local.service_feature_gates, "local_registry", false)
 
   service_subnet_prefix = split("/", var.service_network_subnet_cidr)[1]
 
@@ -32,11 +34,14 @@ locals {
   local_mirror_ipv4_address    = "${local.local_mirror_ip}/${local.service_subnet_prefix}"
   local_mirror_health_check_ip = local.local_mirror_ip
 
-  openbao_ip           = cidrhost(var.service_network_subnet_cidr, 51)
-  openbao_ipv4_address = "${local.openbao_ip}/${local.service_subnet_prefix}"
+  openbao_ip                  = cidrhost(var.service_network_subnet_cidr, 51)
+  openbao_ipv4_address        = "${local.openbao_ip}/${local.service_subnet_prefix}"
+  local_registry_ip           = cidrhost(var.service_network_subnet_cidr, 52)
+  local_registry_ipv4_address = "${local.local_registry_ip}/${local.service_subnet_prefix}"
 
-  local_mirror_name = "${var.cluster_name}-local-mirror"
-  openbao_name      = "${var.cluster_name}-openbao"
+  local_mirror_name   = "${var.cluster_name}-local-mirror"
+  openbao_name        = "${var.cluster_name}-openbao"
+  local_registry_name = "${var.cluster_name}-local-registry"
 
   local_mirror_service_fqdn = var.service_dns_domain != null && trimspace(var.service_dns_domain) != "" ? "local-mirror.${var.service_dns_domain}" : "local-mirror"
   local_mirror_base_url     = "http://${local.local_mirror_service_fqdn}/repos/current"
@@ -148,4 +153,34 @@ module "openbao" {
 
   mirror_base_url         = local.local_mirror_base_url
   local_mirror_service_ip = local.local_mirror_ip
+}
+
+module "local_registry" {
+  for_each = local.local_mirror_enabled && local.openbao_enabled && local.local_registry_enabled ? { this = true } : {}
+
+  source = "../local_registry"
+
+  name                  = local.local_registry_name
+  node_name             = local.primary_node_name
+  datastore_id          = module.images.id
+  pool_id               = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
+  snippets_datastore_id = module.snippets.id
+  boot_image_id         = proxmox_virtual_environment_download_file.vm_template.id
+  boot_image_kind       = "disk"
+
+  cpu_cores    = 2
+  cpu_type     = "host"
+  cpu_flags    = []
+  memory_mb    = 4096
+  disk_size_gb = 40
+  ipv4_address = local.local_registry_ipv4_address
+  ipv4_gateway = var.service_network_gateway
+  dns_servers  = []
+  dns_domain   = var.service_dns_domain
+  tags         = ["service", "local-registry", var.cluster_name]
+
+  mirror_base_url                         = local.local_mirror_base_url
+  local_mirror_service_ip                 = local.local_mirror_ip
+  openbao_service_ip                      = local.openbao_ip
+  openbao_intermediate_ca_certificate_pem = module.openbao["this"].intermediate_ca_certificate
 }

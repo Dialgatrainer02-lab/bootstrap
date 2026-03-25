@@ -37,8 +37,9 @@ module "infra" {
   cluster_name = var.cluster_name
 
   service_feature_gates = {
-    local_mirror = true
-    openbao      = true
+    local_mirror   = true
+    openbao        = true
+    local_registry = false
   }
 
   service_network_subnet_cidr = "192.168.0.0/24"
