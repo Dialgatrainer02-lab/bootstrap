@@ -38,7 +38,8 @@ locals {
   local_mirror_name = "${var.cluster_name}-local-mirror"
   openbao_name      = "${var.cluster_name}-openbao"
 
-  local_mirror_base_url = "http://${local.local_mirror_ip}/repos/current"
+  local_mirror_service_fqdn = var.service_dns_domain != null && trimspace(var.service_dns_domain) != "" ? "local-mirror.${var.service_dns_domain}" : "local-mirror"
+  local_mirror_base_url     = "http://${local.local_mirror_service_fqdn}/repos/current"
 }
 
 module "snippets" {
@@ -145,5 +146,6 @@ module "openbao" {
   dns_domain   = var.service_dns_domain
   tags         = ["service", "openbao", var.cluster_name]
 
-  mirror_base_url = local.local_mirror_base_url
+  mirror_base_url         = local.local_mirror_base_url
+  local_mirror_service_ip = local.local_mirror_ip
 }

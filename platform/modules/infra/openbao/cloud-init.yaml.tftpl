@@ -17,6 +17,13 @@ users:
 output: {all: '| tee -a /var/log/cloud-init-output.log'}
 
 write_files:
+  - path: /etc/hosts
+    permissions: '0644'
+    append: true
+    content: |
+      ${openbao_service_ip} ${openbao_service_fqdn} openbao
+      ${local_mirror_service_ip} ${local_mirror_service_fqdn} local-mirror
+
   - path: /etc/yum.repos.d/local-almalinux.repo
     permissions: '0644'
     content: |

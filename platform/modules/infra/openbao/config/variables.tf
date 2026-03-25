@@ -22,3 +22,15 @@ variable "external_ca_signed_intermediate_file_path" {
   description = "Local file path where the signer writes the signed intermediate PEM. Relative paths are resolved from path.root."
   default     = "certs/external-ca.crt.pem"
 }
+
+variable "pki_api_base_url" {
+  type        = string
+  description = "Base OpenBao API URL used for PKI AIA/CRL/OCSP URLs (for example http://192.168.0.51:8200)."
+  default     = "http://127.0.0.1:8200"
+}
+
+variable "pki_cluster_base_url" {
+  type        = string
+  description = "Base OpenBao cluster API URL used for PKI cluster path config. Defaults to pki_api_base_url when null."
+  default     = null
+}

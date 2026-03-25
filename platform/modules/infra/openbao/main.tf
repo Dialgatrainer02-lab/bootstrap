@@ -1,7 +1,10 @@
 locals {
-  openbao_advertise_ip   = var.ipv4_address != "dhcp" ? split("/", var.ipv4_address)[0] : var.name
-  openbao_api_address    = "http://${local.openbao_advertise_ip}:8200"
-  openbao_admin_username = "admin"
+  openbao_advertise_ip      = var.ipv4_address != "dhcp" ? split("/", var.ipv4_address)[0] : var.name
+  openbao_api_address       = "http://${local.openbao_advertise_ip}:8200"
+  openbao_service_fqdn      = var.dns_domain != null && trimspace(var.dns_domain) != "" ? "openbao.${var.dns_domain}" : "openbao"
+  local_mirror_service_fqdn = var.dns_domain != null && trimspace(var.dns_domain) != "" ? "local-mirror.${var.dns_domain}" : "local-mirror"
+  openbao_service_api_url   = "http://${local.openbao_service_fqdn}:8200"
+  openbao_admin_username    = "admin"
 
   rendered_user_data = coalesce(
     var.cloud_init_user_data,
@@ -9,8 +12,12 @@ locals {
       hostname                       = var.name
       ssh_authorized_keys            = local.authorized_keys
       mirror_base_url                = var.mirror_base_url
-      openbao_api_addr               = local.openbao_advertise_ip
-      openbao_cluster_addr           = local.openbao_advertise_ip
+      openbao_api_addr               = local.openbao_service_fqdn
+      openbao_cluster_addr           = local.openbao_service_fqdn
+      openbao_service_fqdn           = local.openbao_service_fqdn
+      openbao_service_ip             = local.openbao_advertise_ip
+      local_mirror_service_fqdn      = local.local_mirror_service_fqdn
+      local_mirror_service_ip        = var.local_mirror_service_ip
       openbao_raft_node_id           = var.name
       openbao_raft_data_dir          = var.openbao_raft_data_dir
       openbao_initial_admin_password = random_password.inital_admin_password.result
@@ -71,6 +78,8 @@ data "http" "openbao_api_ready" {
 module "config" {
   source = "./config"
 
+  pki_api_base_url     = local.openbao_service_api_url
+  pki_cluster_base_url = local.openbao_service_api_url
 
   depends_on = [data.http.openbao_api_ready]
 
