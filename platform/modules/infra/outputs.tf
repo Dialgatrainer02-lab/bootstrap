@@ -98,3 +98,28 @@ output "openbao_config_kv_mount_path" {
   description = "KV mount path configured by the OpenBao config submodule."
   value       = try(module.openbao["this"].config_kv_mount_path, null)
 }
+
+output "openbao_intermediate_ca_certificate" {
+  description = "PEM-encoded OpenBao intermediate CA certificate."
+  value       = try(module.openbao["this"].intermediate_ca_certificate, null)
+}
+
+output "local_registry_id" {
+  description = "VM resource id for the local registry VM (if enabled)."
+  value       = try(module.local_registry["this"].id, null)
+}
+
+output "local_registry_vm_id" {
+  description = "VM id for the local registry VM (if enabled)."
+  value       = try(module.local_registry["this"].vm_id, null)
+}
+
+output "local_registry_cloud_init_user_data_file_id" {
+  description = "Proxmox snippet file id for the local registry VM user-data (if enabled)."
+  value       = try(module.local_registry["this"].cloud_init_user_data_file_id, null)
+}
+
+output "local_registry_ipv4_address" {
+  description = "Derived IPv4 CIDR address used by the local registry service VM."
+  value       = local.local_mirror_enabled && local.openbao_enabled && local.local_registry_enabled ? local.local_registry_ipv4_address : null
+}
