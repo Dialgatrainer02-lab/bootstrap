@@ -17,6 +17,15 @@ locals {
     var.cloud_init_network_data_file_id,
     try(proxmox_virtual_environment_file.cloud_init_network_data[0].id, null),
   ), null)
+  dns_servers         = coalesce(var.dns_servers, [])
+  ssh_authorized_keys = coalesce(var.ssh_authorized_keys, [])
+
+  use_external_user_data    = local.cloud_init_user_data_file_id != null || var.cloud_init_user_data != null
+  use_external_network_data = local.cloud_init_network_data_file_id != null || var.cloud_init_network_data != null
+
+  include_ip_config_block    = !local.use_external_network_data
+  include_dns_block          = !local.use_external_network_data && (var.dns_domain != null || length(local.dns_servers) > 0)
+  include_user_account_block = !local.use_external_user_data && (var.user_password != null || length(local.ssh_authorized_keys) > 0)
 
   network_devices = length(var.network_devices) > 0 ? var.network_devices : [
     {
@@ -122,7 +131,7 @@ resource "proxmox_virtual_environment_vm" "this" {
   tags      = var.tags
 
   machine = var.machine
-  bios = var.bios
+  bios    = var.bios
   operating_system {
     type = var.os_type
   }
@@ -183,28 +192,37 @@ resource "proxmox_virtual_environment_vm" "this" {
   serial_device {}
   initialization {
     datastore_id = var.datastore_id
-    interface = var.cloud_init_interface
-    file_format = "raw"
+    interface    = var.cloud_init_interface
+    file_format  = "raw"
 
     user_data_file_id    = local.cloud_init_user_data_file_id
     meta_data_file_id    = local.cloud_init_meta_data_file_id
     network_data_file_id = local.cloud_init_network_data_file_id
 
-    ip_config {
-      ipv4 {
-        address = var.ipv4_address
-        gateway = var.ipv4_gateway
+    dynamic "ip_config" {
+      for_each = local.include_ip_config_block ? [true] : []
+      content {
+        ipv4 {
+          address = var.ipv4_address
+          gateway = var.ipv4_gateway
+        }
       }
     }
 
-    dns {
-      domain  = var.dns_domain
-      servers = var.dns_servers
+    dynamic "dns" {
+      for_each = local.include_dns_block ? [true] : []
+      content {
+        domain  = var.dns_domain
+        servers = local.dns_servers
+      }
     }
 
-    user_account {
-      keys     = var.ssh_authorized_keys
-      password = var.user_password
+    dynamic "user_account" {
+      for_each = local.include_user_account_block ? [true] : []
+      content {
+        keys     = local.ssh_authorized_keys
+        password = var.user_password
+      }
     }
   }
 

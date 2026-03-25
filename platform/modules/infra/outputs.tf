@@ -3,10 +3,10 @@ output "cluster_name" {
   value       = var.cluster_name
 }
 
-output "discovered_nodes" {
-  description = "Raw node data discovered from the Proxmox provider."
-  value       = data.proxmox_virtual_environment_nodes.discovered
-}
+# output "discovered_nodes" {
+# description = "Raw node data discovered from the Proxmox provider."
+# value       = data.proxmox_virtual_environment_nodes.discovered
+# }
 
 output "primary_node_name" {
   description = "Primary node name used for shared downloads/uploads."
@@ -76,4 +76,25 @@ output "openbao_cloud_init_user_data_file_id" {
 output "openbao_ipv4_address" {
   description = "Derived IPv4 CIDR address used by the openbao service VM."
   value       = local.local_mirror_enabled && local.openbao_enabled ? local.openbao_ipv4_address : null
+}
+
+output "openbao_api_address" {
+  description = "OpenBao API address for provider configuration."
+  value       = try(module.openbao["this"].api_address, null)
+}
+
+output "openbao_admin_username" {
+  description = "OpenBao admin username for provider configuration."
+  value       = try(module.openbao["this"].admin_username, null)
+}
+
+output "openbao_initial_admin_password" {
+  description = "OpenBao initial admin password for provider configuration."
+  value       = try(module.openbao["this"].initial_admin_password, null)
+  sensitive   = true
+}
+
+output "openbao_config_kv_mount_path" {
+  description = "KV mount path configured by the OpenBao config submodule."
+  value       = try(module.openbao["this"].config_kv_mount_path, null)
 }

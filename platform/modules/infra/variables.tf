@@ -72,17 +72,6 @@ variable "service_network_gateway" {
   description = "IPv4 gateway used by service VMs."
 }
 
-variable "service_network_bridge" {
-  type        = string
-  description = "Bridge used by service VMs."
-  default     = "vmbr0"
-}
-
-variable "service_dns_servers" {
-  type        = list(string)
-  description = "DNS servers used by service VMs."
-  default     = []
-}
 
 variable "service_dns_domain" {
   type        = string
