@@ -24,7 +24,7 @@ resource "tls_private_key" "local_repo_vm_ssh" {
 
 resource "local_sensitive_file" "local_repo_vm_ssh_private_key" {
 
-  filename        = "${path.root}/keys/local-repo"
+  filename        = "${path.root}/keys/local-mirror"
   content         = tls_private_key.local_repo_vm_ssh.private_key_openssh
   file_permission = "0600"
 }
@@ -69,6 +69,7 @@ module "vm" {
   tags            = var.tags
   boot_image_id   = var.boot_image_id
   boot_image_kind = var.boot_image_kind
+  ssh_authorized_keys = null
 
   cloud_init_user_data_file_id = proxmox_virtual_environment_file.cloud_init_user_data.id
 }
