@@ -29,7 +29,7 @@ output "boot_image_download_size" {
 }
 
 output "vm" {
-  value = proxmox_virtual_environment_vm.this
+  value       = proxmox_virtual_environment_vm.this
   description = "Proxmox vm resource"
-  sensitive = true
+  sensitive   = true
 }

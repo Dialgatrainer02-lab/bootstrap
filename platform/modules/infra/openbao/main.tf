@@ -1,5 +1,5 @@
 locals {
-  openbao_advertise_ip   = var.ipv4_address != "dhcp" ? split("/", var.ipv4_address)[0]: var.name
+  openbao_advertise_ip   = var.ipv4_address != "dhcp" ? split("/", var.ipv4_address)[0] : var.name
   openbao_api_address    = "http://${local.openbao_advertise_ip}:8200"
   openbao_admin_username = "admin"
 

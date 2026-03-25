@@ -54,21 +54,21 @@ module "vm" {
   cpu_flags = var.cpu_flags
   memory_mb = var.memory_mb
 
-  disk_size_gb    = var.disk_size_gb
+  disk_size_gb = var.disk_size_gb
   extra_disks = [
     {
       size_gb   = var.packages_disk_size_gb
       interface = "scsi1"
     }
   ]
-  network_bridge  = var.network_bridge
-  ipv4_address    = var.ipv4_address
-  ipv4_gateway    = var.ipv4_gateway
-  dns_servers     = var.dns_servers
-  dns_domain      = var.dns_domain
-  tags            = var.tags
-  boot_image_id   = var.boot_image_id
-  boot_image_kind = var.boot_image_kind
+  network_bridge      = var.network_bridge
+  ipv4_address        = var.ipv4_address
+  ipv4_gateway        = var.ipv4_gateway
+  dns_servers         = var.dns_servers
+  dns_domain          = var.dns_domain
+  tags                = var.tags
+  boot_image_id       = var.boot_image_id
+  boot_image_kind     = var.boot_image_kind
   ssh_authorized_keys = null
 
   cloud_init_user_data_file_id = proxmox_virtual_environment_file.cloud_init_user_data.id

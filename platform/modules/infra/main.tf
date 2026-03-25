@@ -104,21 +104,21 @@ module "local_mirror" {
 }
 
 # resource "terraform_data" "local_mirror_health_check" {
-  # count = local.local_mirror_enabled ? 1 : 0
+# count = local.local_mirror_enabled ? 1 : 0
 # 
-  # triggers_replace = {
-    # ip    = local.local_mirror_health_check_ip
-    # path  = "/repos/current/"
-    # vm_id = tostring(try(module.local_mirror["this"].vm_id, ""))
-  # }
+# triggers_replace = {
+# ip    = local.local_mirror_health_check_ip
+# path  = "/repos/current/"
+# vm_id = tostring(try(module.local_mirror["this"].vm_id, ""))
+# }
 # 
-  # depends_on = [module.local_mirror]
+# depends_on = [module.local_mirror]
 # 
-  # provisioner "local-exec" {
-    # command = <<-EOT
-      # bash -lc 'for i in $$(seq 1 30); do curl -fsS "http://${local.local_mirror_health_check_ip}/repos/current/" >/dev/null && exit 0; sleep 10; done; echo "Repository health check failed: http://${local.local_mirror_health_check_ip}/repos/current/" >&2; exit 1'
-    # EOT
-  # }
+# provisioner "local-exec" {
+# command = <<-EOT
+# bash -lc 'for i in $$(seq 1 30); do curl -fsS "http://${local.local_mirror_health_check_ip}/repos/current/" >/dev/null && exit 0; sleep 10; done; echo "Repository health check failed: http://${local.local_mirror_health_check_ip}/repos/current/" >&2; exit 1'
+# EOT
+# }
 # }
 
 module "openbao" {
@@ -134,16 +134,16 @@ module "openbao" {
   boot_image_id         = proxmox_virtual_environment_download_file.vm_template.id
   boot_image_kind       = "disk"
 
-  cpu_cores      = 2
-  cpu_type       = "host"
-  cpu_flags      = []
-  memory_mb      = 4096
-  disk_size_gb   = 40
-  ipv4_address   = local.openbao_ipv4_address
-  ipv4_gateway   = var.service_network_gateway
-  dns_servers    = []
-  dns_domain     = var.service_dns_domain
-  tags           = ["service", "openbao", var.cluster_name]
+  cpu_cores    = 2
+  cpu_type     = "host"
+  cpu_flags    = []
+  memory_mb    = 4096
+  disk_size_gb = 40
+  ipv4_address = local.openbao_ipv4_address
+  ipv4_gateway = var.service_network_gateway
+  dns_servers  = []
+  dns_domain   = var.service_dns_domain
+  tags         = ["service", "openbao", var.cluster_name]
 
   mirror_base_url = local.local_mirror_base_url
 }

@@ -2,3 +2,5 @@
 *tfstate*
 proxmox.auto.tfvars
 keys
+root
+certs
