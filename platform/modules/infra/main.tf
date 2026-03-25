@@ -1,15 +1,6 @@
 # Auto-discover available Proxmox nodes for downstream modules.
 data "proxmox_virtual_environment_nodes" "discovered" {}
 
-moved {
-  from = module.local_repo_vm["this"]
-  to   = module.local_mirror["this"]
-}
-
-moved {
-  from = terraform_data.local_repo_vm_health_check[0]
-  to   = terraform_data.local_mirror_health_check[0]
-}
 
 locals {
   default_snippets_datastore_name = "${var.cluster_name}-snippets"
@@ -105,10 +96,9 @@ module "local_mirror" {
   disk_size_gb          = 20
   packages_disk_size_gb = 100
   repo_disk_device      = null
-  network_bridge        = var.service_network_bridge
   ipv4_address          = local.local_mirror_ipv4_address
   ipv4_gateway          = var.service_network_gateway
-  dns_servers           = var.service_dns_servers
+  dns_servers           = null
   dns_domain            = var.service_dns_domain
   tags                  = ["service", "local-mirror", var.cluster_name]
 }
@@ -149,10 +139,9 @@ module "openbao" {
   cpu_flags      = []
   memory_mb      = 4096
   disk_size_gb   = 40
-  network_bridge = var.service_network_bridge
   ipv4_address   = local.openbao_ipv4_address
   ipv4_gateway   = var.service_network_gateway
-  dns_servers    = var.service_dns_servers
+  dns_servers    = []
   dns_domain     = var.service_dns_domain
   tags           = ["service", "openbao", var.cluster_name]
 

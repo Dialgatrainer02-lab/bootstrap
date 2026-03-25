@@ -1,16 +1,20 @@
 locals {
-  openbao_advertise_ip = var.ipv4_address != "dhcp" ? regexreplace(var.ipv4_address, "/[0-9]+$", "") : var.name
+  openbao_advertise_ip   = var.ipv4_address != "dhcp" ? split("/", var.ipv4_address)[0]: var.name
+  openbao_api_address    = "http://${local.openbao_advertise_ip}:8200"
+  openbao_admin_username = "admin"
 
   rendered_user_data = coalesce(
     var.cloud_init_user_data,
     templatefile("${path.module}/cloud-init.yaml.tftpl", {
-      hostname              = var.name
-      ssh_authorized_keys   = local.authorized_keys
-      mirror_base_url       = var.mirror_base_url
-      openbao_api_addr      = local.openbao_advertise_ip
-      openbao_cluster_addr  = local.openbao_advertise_ip
-      openbao_raft_node_id  = var.name
-      openbao_raft_data_dir = var.openbao_raft_data_dir
+      hostname                       = var.name
+      ssh_authorized_keys            = local.authorized_keys
+      mirror_base_url                = var.mirror_base_url
+      openbao_api_addr               = local.openbao_advertise_ip
+      openbao_cluster_addr           = local.openbao_advertise_ip
+      openbao_raft_node_id           = var.name
+      openbao_raft_data_dir          = var.openbao_raft_data_dir
+      openbao_initial_admin_password = random_password.inital_admin_password.result
+      openbao_key_0                  = random_bytes.key_0.base64
     }),
   )
 }
@@ -32,6 +36,15 @@ resource "local_sensitive_file" "openbao_vm_ssh_private_key" {
   file_permission = "0600"
 }
 
+resource "random_password" "inital_admin_password" {
+  length  = 32
+  special = false
+}
+
+resource "random_bytes" "key_0" {
+  length = 32
+}
+
 resource "proxmox_virtual_environment_file" "cloud_init_user_data" {
   content_type = "snippets"
   datastore_id = var.snippets_datastore_id
@@ -41,6 +54,26 @@ resource "proxmox_virtual_environment_file" "cloud_init_user_data" {
     file_name = "${var.name}-user-data.yaml"
     data      = local.rendered_user_data
   }
+}
+
+data "http" "openbao_api_ready" {
+  url = "${local.openbao_api_address}/v1/sys/health"
+
+  retry {
+    attempts     = 30
+    min_delay_ms = 10000
+    max_delay_ms = 10000
+  }
+
+  depends_on = [module.vm]
+}
+
+module "config" {
+  source = "./config"
+
+
+  depends_on = [data.http.openbao_api_ready]
+
 }
 
 module "vm" {

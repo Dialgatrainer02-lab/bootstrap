@@ -18,8 +18,17 @@ provider "tls" {
 
 }
 
-provider "local" {
+provider "local" {}
 
+provider "vault" {
+  address         = module.infra.openbao_api_address
+  skip_tls_verify = true
+  skip_get_vault_version = true
+
+  auth_login_userpass {
+    username = module.infra.openbao_admin_username
+    password = module.infra.openbao_initial_admin_password
+  }
 }
 
 module "infra" {
@@ -29,7 +38,7 @@ module "infra" {
 
   service_feature_gates = {
     local_mirror = true
-    openbao      = false
+    openbao      = true
   }
 
   service_network_subnet_cidr = "192.168.0.0/24"
