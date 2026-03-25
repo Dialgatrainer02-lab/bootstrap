@@ -33,3 +33,8 @@ output "config_kv_mount_path" {
   description = "KV mount path managed by the OpenBao config submodule."
   value       = module.config.kv_mount_path
 }
+
+output "intermediate_ca_certificate" {
+  description = "PEM-encoded OpenBao intermediate CA certificate."
+  value       = module.config.intermediate_ca_certificate
+}
