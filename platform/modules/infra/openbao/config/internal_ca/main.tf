@@ -46,5 +46,6 @@ resource "vault_pki_secret_backend_role" "issuing" {
   allow_subdomains            = var.role.allow_subdomains
   allow_ip_sans               = var.role.allow_ip_sans
   allow_wildcard_certificates = var.role.allow_wildcard_certificates
+  no_store                    = var.role.no_store
   issuer_ref                  = vault_pki_secret_backend_issuer.this.issuer_ref
 }

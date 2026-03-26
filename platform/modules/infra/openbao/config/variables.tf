@@ -34,3 +34,9 @@ variable "pki_cluster_base_url" {
   description = "Base OpenBao cluster API URL used for PKI cluster path config. Defaults to pki_api_base_url when null."
   default     = null
 }
+
+variable "pki_role_allowed_domains" {
+  type        = list(string)
+  description = "Allowed DNS domains for the issuing role in the pki_iss mount."
+  default     = ["example.com"]
+}

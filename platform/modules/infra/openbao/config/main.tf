@@ -124,6 +124,11 @@ module "issuer_v1_1_1" {
     key_type         = "ec"
     key_bits         = 256
   }
+  role = {
+    allowed_domains = var.pki_role_allowed_domains
+    allow_ip_sans   = true
+    no_store        = true
+  }
   depends_on = [
     vault_mount.pki_iss,
     vault_pki_secret_backend_config_urls.pki_iss,

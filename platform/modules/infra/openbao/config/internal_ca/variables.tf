@@ -22,6 +22,7 @@ variable "role" {
     allow_subdomains            = optional(bool, true)
     allow_ip_sans               = optional(bool, true)
     allow_wildcard_certificates = optional(bool, false)
+    no_store                    = optional(bool, true)
   })
   default = {}
 }
