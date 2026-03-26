@@ -1,5 +1,5 @@
 output "infra" {
   description = "Infra module outputs."
-  value       = module.infra
+  value       = module.dev
   sensitive   = true
 }

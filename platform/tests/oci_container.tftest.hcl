@@ -4,7 +4,7 @@ provider "proxmox" {
 
 run "basic_plan" {
   module {
-    source = "./modules/oci_container"
+    source = "./modules/infrastructure/oci_container"
   }
 
   command = plan
@@ -67,7 +67,7 @@ run "basic_plan" {
 
 run "basic_apply" {
   module {
-    source = "./modules/oci_container"
+    source = "./modules/infrastructure/oci_container"
   }
 
   command = apply

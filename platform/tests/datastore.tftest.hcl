@@ -4,7 +4,7 @@ provider "proxmox" {
 
 run "basic_plan" {
   module {
-    source = "./modules/datastore"
+    source = "./modules/infrastructure/datastore"
   }
 
   command = plan
@@ -29,7 +29,7 @@ run "basic_plan" {
 
 run "apply_plan" {
   module {
-    source = "./modules/datastore"
+    source = "./modules/infrastructure/datastore"
   }
 
   command = apply

@@ -88,7 +88,7 @@ module "config" {
 }
 
 module "vm" {
-  source = "../../vm"
+  source = "../infrastructure/vm"
 
   name         = var.name
   node_name    = var.node_name
