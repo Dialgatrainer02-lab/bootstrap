@@ -15,9 +15,8 @@ variable "type" {
 }
 
 variable "pool_id" {
-  type     = string
-  default  = null
-  nullable = true
+  type    = string
+  default = null
 }
 variable "path" {
   type        = string

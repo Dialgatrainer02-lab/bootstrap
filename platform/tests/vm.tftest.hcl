@@ -93,6 +93,11 @@ run "plan_with_boot_image_id" {
   }
 
   assert {
+    condition     = proxmox_virtual_environment_vm.this.stop_on_destroy == false
+    error_message = "Expected stop_on_destroy to default to false when guest agent is enabled."
+  }
+
+  assert {
     condition     = proxmox_virtual_environment_vm.this.cdrom[0].file_id == "local:iso/ubuntu-24.04.iso"
     error_message = "Expected boot image id to be used for the VM cdrom."
   }
@@ -189,6 +194,39 @@ run "plan_with_boot_disk_image_id" {
   }
 }
 
+run "plan_sets_stop_on_destroy_when_guest_agent_disabled" {
+  module {
+    source = "./modules/vm"
+  }
+
+  command = plan
+
+  variables {
+    name                = "vm-no-agent-1"
+    node_name           = "pve-01"
+    datastore_id        = "local-lvm"
+    boot_image_kind     = "disk"
+    boot_image_id       = "local:iso/AlmaLinux-10-GenericCloud-latest.x86_64.qcow2.img"
+    guest_agent_enabled = false
+    cpu_cores           = 2
+    memory_mb           = 2048
+    disk_size_gb        = 20
+    network_bridge      = "vmbr0"
+    ipv4_address        = "dhcp"
+    tags                = ["no-agent"]
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.agent[0].enabled == false
+    error_message = "Expected guest agent to be disabled."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.stop_on_destroy == true
+    error_message = "Expected stop_on_destroy to default to true when guest agent is disabled."
+  }
+}
+
 run "snippets_datastore_apply" {
   module {
     source = "./modules/datastore"
@@ -232,6 +270,7 @@ run "basic_apply" {
     network_bridge = "vmbr0"
     ipv4_address   = "dhcp"
     tags           = ["apply-test"]
+    guest_agent_enabled = false
   }
 
   assert {
@@ -307,6 +346,7 @@ run "apply_with_boot_disk_image_id" {
     network_bridge  = "vmbr0"
     ipv4_address    = "dhcp"
     tags            = ["disk"]
+    guest_agent_enabled = false
   }
 
   assert {

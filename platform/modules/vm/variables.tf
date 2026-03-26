@@ -90,6 +90,12 @@ variable "guest_agent_enabled" {
   default     = true
 }
 
+variable "stop_on_destroy" {
+  type        = bool
+  description = "Whether Terraform should stop the VM before destroy. Defaults to true when guest_agent_enabled is false."
+  default     = null
+}
+
 variable "efi_disk_type" {
   type        = string
   description = "EFI disk type/size."
