@@ -2,19 +2,27 @@ locals {
   openbao_service_fqdn      = var.dns_domain != null && trimspace(var.dns_domain) != "" ? "openbao.${var.dns_domain}" : "openbao"
   local_mirror_service_fqdn = var.dns_domain != null && trimspace(var.dns_domain) != "" ? "local-mirror.${var.dns_domain}" : "local-mirror"
 
-  rendered_user_data = coalesce(
-    var.cloud_init_user_data,
-    templatefile("${path.module}/cloud-init.yaml.tftpl", {
-      hostname                                = var.name
-      ssh_authorized_keys                     = local.authorized_keys
-      mirror_base_url                         = var.mirror_base_url
-      openbao_service_fqdn                    = local.openbao_service_fqdn
-      openbao_service_ip                      = var.openbao_service_ip
-      local_mirror_service_fqdn               = local.local_mirror_service_fqdn
-      local_mirror_service_ip                 = var.local_mirror_service_ip
-      openbao_intermediate_ca_certificate_pem = var.openbao_intermediate_ca_certificate_pem
-    }),
-  )
+  base_cloud_init_fragment = templatefile("${path.module}/../shared/cloudinit/fragments/base.yaml.tftpl", {
+    hostname            = var.name
+    package_update      = false
+    package_upgrade     = false
+    ssh_authorized_keys = local.authorized_keys
+  })
+  hosts_cloud_init_fragment = templatefile("${path.module}/../shared/cloudinit/fragments/hosts-openbao-local-mirror.yaml.tftpl", {
+    openbao_service_fqdn      = local.openbao_service_fqdn
+    openbao_service_ip        = var.openbao_service_ip
+    local_mirror_service_fqdn = local.local_mirror_service_fqdn
+    local_mirror_service_ip   = var.local_mirror_service_ip
+  })
+  local_repos_cloud_init_fragment = templatefile("${path.module}/../shared/cloudinit/fragments/local-yum-repos.yaml.tftpl", {
+    mirror_base_url = var.mirror_base_url
+    mirror_wait_url = "${var.mirror_base_url}/"
+  })
+  trusted_ca_cloud_init_fragment = templatefile("${path.module}/../shared/cloudinit/fragments/trusted-ca.yaml.tftpl", {
+    certificate_pem = var.openbao_root_ca_certificate_pem
+  })
+  service_cloud_init_fragment = templatefile("${path.module}/cloud-init.yaml.tftpl", {})
+  rendered_user_data          = coalesce(var.cloud_init_user_data, try(data.cloudinit_config.user_data[0].rendered, null))
 }
 
 locals {
@@ -35,12 +43,34 @@ resource "local_sensitive_file" "local_registry_vm_ssh_private_key" {
 }
 
 data "cloudinit_config" "user_data" {
+  count = var.cloud_init_user_data == null ? 1 : 0
+
   gzip          = false
   base64_encode = false
 
   part {
     content_type = "text/cloud-config"
-    content      = local.rendered_user_data
+    content      = local.base_cloud_init_fragment
+  }
+
+  part {
+    content_type = "text/cloud-config"
+    content      = local.hosts_cloud_init_fragment
+  }
+
+  part {
+    content_type = "text/cloud-config"
+    content      = local.local_repos_cloud_init_fragment
+  }
+
+  part {
+    content_type = "text/cloud-config"
+    content      = local.trusted_ca_cloud_init_fragment
+  }
+
+  part {
+    content_type = "text/cloud-config"
+    content      = local.service_cloud_init_fragment
   }
 }
 
@@ -51,7 +81,7 @@ resource "proxmox_virtual_environment_file" "cloud_init_user_data" {
 
   source_raw {
     file_name = "${var.name}-user-data.yaml"
-    data      = data.cloudinit_config.user_data.rendered
+    data      = local.rendered_user_data
   }
 }
 

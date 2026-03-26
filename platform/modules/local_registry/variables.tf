@@ -139,7 +139,8 @@ variable "openbao_service_ip" {
   description = "IPv4 address used to map the OpenBao hostname in /etc/hosts."
 }
 
-variable "openbao_intermediate_ca_certificate_pem" {
+variable "openbao_root_ca_certificate_pem" {
   type        = string
-  description = "PEM-encoded OpenBao intermediate CA certificate to install into system trust."
+  description = "PEM-encoded root CA certificate to install into system trust."
+  default     = null
 }

@@ -6,6 +6,10 @@ terraform {
       source  = "bpg/proxmox"
       version = "0.98.1"
     }
+    cloudinit = {
+      source  = "hashicorp/cloudinit"
+      version = "2.3.7"
+    }
     tls = {
       source  = "hashicorp/tls"
       version = "4.2.1"

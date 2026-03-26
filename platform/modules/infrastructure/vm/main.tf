@@ -125,12 +125,14 @@ resource "proxmox_virtual_environment_download_file" "boot" {
 }
 
 resource "proxmox_virtual_environment_vm" "this" {
-  name            = var.name
-  node_name       = var.node_name
-  vm_id           = var.vm_id
-  pool_id         = var.pool_id
-  tags            = var.tags
-  stop_on_destroy = local.stop_on_destroy
+  name             = var.name
+  node_name        = var.node_name
+  vm_id            = var.vm_id
+  pool_id          = var.pool_id
+  tags             = var.tags
+  migrate          = var.migrate
+  stop_on_destroy  = local.stop_on_destroy
+  purge_on_destroy = true
 
   machine = var.machine
   bios    = var.bios

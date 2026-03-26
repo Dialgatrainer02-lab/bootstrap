@@ -313,3 +313,9 @@ variable "os_type" {
   description = "Guest OS type (e.g., l26 for Linux)."
   default     = "l26"
 }
+
+variable "migrate" {
+  type        = bool
+  description = "Whether to migrate the VM when node_name changes instead of recreating."
+  default     = true
+}

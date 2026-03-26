@@ -1,0 +1,75 @@
+#cloud-config
+merge_how:
+  - name: list
+    settings: [append]
+  - name: dict
+    settings: [no_replace, recurse_list]
+
+write_files:
+  - path: /etc/yum.repos.d/local-almalinux.repo
+    permissions: "0644"
+    content: |
+      [local-baseos]
+      name=Local AlmaLinux 10 - BaseOS
+      baseurl=${mirror_base_url}/almalinux/10/baseos
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+
+      [local-appstream]
+      name=Local AlmaLinux 10 - AppStream
+      baseurl=${mirror_base_url}/almalinux/10/appstream
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+
+      [local-extras]
+      name=Local AlmaLinux 10 - Extras
+      baseurl=${mirror_base_url}/almalinux/10/extras
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+
+      [local-crb]
+      name=Local AlmaLinux 10 - CRB
+      baseurl=${mirror_base_url}/almalinux/10/crb
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+
+  - path: /etc/yum.repos.d/local-third-party.repo
+    permissions: "0644"
+    content: |
+      [local-epel]
+      name=Local EPEL
+      baseurl=${mirror_base_url}/epel
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+
+      [local-docker-ce-stable]
+      name=Local Docker CE Stable
+      baseurl=${mirror_base_url}/docker
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+
+      [local-vector]
+      name=Local Vector
+      baseurl=${mirror_base_url}/vector
+      enabled=1
+      gpgcheck=0
+      repo_gpgcheck=0
+bootcmd:
+  - |
+    echo "Waiting for repo..."
+    until curl -fsS "${mirror_wait_url}" >/dev/null; do
+      sleep 5
+    done
+runcmd:
+  - rm -f /etc/yum.repos.d/almalinux*.repo
+  - rm -f /etc/yum.repos.d/epel*.repo
+  - rm -f /etc/yum.repos.d/docker*.repo
+  - rm -f /etc/yum.repos.d/vector*.repo
+  - dnf clean all
+  - dnf makecache

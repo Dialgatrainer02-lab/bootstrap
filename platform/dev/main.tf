@@ -16,7 +16,7 @@ locals {
   images_datastore_path = coalesce(var.images_datastore_path, local.default_images_datastore_path)
   resource_pool_name    = coalesce(var.resource_pool_name, "${var.cluster_name}-pool")
 
-  primary_node_name = data.proxmox_virtual_environment_nodes.discovered.names[0]
+  primary_node_name = data.proxmox_virtual_environment_nodes.discovered.names[1]
 
   service_feature_gates = merge({
     local_mirror   = true
@@ -58,7 +58,12 @@ locals {
 
   local_mirror_service_fqdn = var.service_dns_domain != null && trimspace(var.service_dns_domain) != "" ? "local-mirror.${var.service_dns_domain}" : "local-mirror"
   local_mirror_base_url     = "http://${local.local_mirror_service_fqdn}/repos/current"
+  openbao_service_fqdn      = var.service_dns_domain != null && trimspace(var.service_dns_domain) != "" ? "openbao.${var.service_dns_domain}" : "openbao"
+  openbao_service_api_url   = "http://${local.openbao_service_fqdn}:8200"
+  pki_role_allowed_domains  = var.service_dns_domain != null && trimspace(var.service_dns_domain) != "" ? [trimspace(var.service_dns_domain)] : ["example.com"]
+  service_vm_cpu_type       = "host"
 }
+
 
 module "snippets" {
   source = "../modules/infrastructure/datastore"
@@ -74,7 +79,7 @@ module "images" {
 
   name    = local.images_datastore_name
   path    = local.images_datastore_path
-  content = ["iso", "images", "vztmpl"]
+  content = ["import", "iso", "images", "vztmpl"]
   pool_id = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
 }
 
@@ -122,20 +127,6 @@ module "local_mirror" {
   tags                  = local.local_mirror_tags
 }
 
-data "http" "local_mirror_ready" {
-  count = local.local_mirror_enabled ? 1 : 0
-
-  url = "http://${local.local_mirror_health_check_ip}/repos/current/"
-
-  retry {
-    attempts     = 50
-    min_delay_ms = 10000
-    max_delay_ms = 100000
-  }
-
-  depends_on = [module.local_mirror]
-}
-
 module "openbao" {
   for_each = local.local_mirror_enabled && local.openbao_enabled ? { this = true } : {}
 
@@ -150,7 +141,7 @@ module "openbao" {
   boot_image_kind       = "disk"
 
   cpu_cores    = 2
-  cpu_type     = "host"
+  cpu_type     = local.service_vm_cpu_type
   cpu_flags    = []
   memory_mb    = 4096
   disk_size_gb = 40
@@ -162,8 +153,19 @@ module "openbao" {
 
   mirror_base_url         = local.local_mirror_base_url
   local_mirror_service_ip = local.local_mirror_ip
+}
 
-  depends_on = [data.http.local_mirror_ready]
+module "openbao_config" {
+  for_each = local.local_mirror_enabled && local.openbao_enabled ? { this = true } : {}
+
+  source = "../modules/openbao/config"
+
+  pki_api_base_url         = local.openbao_service_api_url
+  pki_cluster_base_url     = local.openbao_service_api_url
+  pki_wait_base_url        = "http://${local.openbao_ip}:8200"
+  pki_role_allowed_domains = local.pki_role_allowed_domains
+
+  depends_on = [module.openbao]
 }
 
 module "local_registry" {
@@ -180,7 +182,7 @@ module "local_registry" {
   boot_image_kind       = "disk"
 
   cpu_cores    = 2
-  cpu_type     = "host"
+  cpu_type     = local.service_vm_cpu_type
   cpu_flags    = []
   memory_mb    = 4096
   disk_size_gb = 40
@@ -190,10 +192,10 @@ module "local_registry" {
   dns_domain   = var.service_dns_domain
   tags         = local.local_registry_tags
 
-  mirror_base_url                         = local.local_mirror_base_url
-  local_mirror_service_ip                 = local.local_mirror_ip
-  openbao_service_ip                      = local.openbao_ip
-  openbao_intermediate_ca_certificate_pem = module.openbao["this"].intermediate_ca_certificate
+  mirror_base_url                 = local.local_mirror_base_url
+  local_mirror_service_ip         = local.local_mirror_ip
+  openbao_service_ip              = local.openbao_ip
+  openbao_root_ca_certificate_pem = module.openbao_config["this"].root_ca_certificate
 
-  depends_on = [data.http.local_mirror_ready, module.openbao]
+  depends_on = [module.openbao]
 }

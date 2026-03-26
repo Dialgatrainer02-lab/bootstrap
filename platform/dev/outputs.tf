@@ -96,12 +96,17 @@ output "openbao_initial_admin_password" {
 
 output "openbao_config_kv_mount_path" {
   description = "KV mount path configured by the OpenBao config submodule."
-  value       = try(module.openbao["this"].config_kv_mount_path, null)
+  value       = try(module.openbao_config["this"].kv_mount_path, null)
 }
 
 output "openbao_intermediate_ca_certificate" {
   description = "PEM-encoded OpenBao intermediate CA certificate."
-  value       = try(module.openbao["this"].intermediate_ca_certificate, null)
+  value       = try(module.openbao_config["this"].intermediate_ca_certificate, null)
+}
+
+output "openbao_root_ca_certificate" {
+  description = "PEM-encoded OpenBao root CA certificate."
+  value       = try(module.openbao_config["this"].root_ca_certificate, null)
 }
 
 output "local_registry_id" {

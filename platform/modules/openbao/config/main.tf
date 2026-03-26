@@ -1,8 +1,25 @@
+resource "terraform_data" "wait_for_openbao_api" {
+  input = {
+    wait_base_url = coalesce(var.pki_wait_base_url, var.pki_api_base_url)
+  }
+
+  triggers_replace = {
+    wait_base_url = coalesce(var.pki_wait_base_url, var.pki_api_base_url)
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      bash -lc 'set -euo pipefail; for i in $(seq 1 300); do curl -fsS "${self.input.wait_base_url}/v1/sys/health" >/dev/null && exit 0; sleep 20; done; echo "OpenBao API readiness check failed: ${self.input.wait_base_url}/v1/sys/health" >&2; exit 1'
+    EOT
+  }
+}
 
 resource "vault_mount" "kv" {
   path        = var.kv_mount_path
   type        = "kv-v2"
   description = "KV v2 mount managed by Terraform"
+
+  depends_on = [terraform_data.wait_for_openbao_api]
 }
 
 
@@ -17,6 +34,8 @@ resource "vault_mount" "pki_iss" {
   type                  = "pki"
   description           = "PKI engine hosting issuing CA"
   max_lease_ttl_seconds = local.default_1hr_in_sec
+
+  depends_on = [terraform_data.wait_for_openbao_api]
 }
 
 resource "vault_mount" "pki_int" {
@@ -25,6 +44,8 @@ resource "vault_mount" "pki_int" {
   description               = "PKI engine hosting intermediate CA"
   max_lease_ttl_seconds     = local.default_3y_in_sec
   default_lease_ttl_seconds = local.default_1y_in_sec
+
+  depends_on = [terraform_data.wait_for_openbao_api]
 }
 
 locals {
@@ -43,8 +64,13 @@ locals {
   external_ca_csr_file_path = startswith(var.external_ca_csr_file_path, "/") ? var.external_ca_csr_file_path : "${path.root}/root/${trimprefix(trimprefix(var.external_ca_csr_file_path, "./"), "root/")}"
 
   external_ca_signed_intermediate_file_path = startswith(var.external_ca_signed_intermediate_file_path, "/") ? var.external_ca_signed_intermediate_file_path : "${path.root}/root/${trimprefix(trimprefix(var.external_ca_signed_intermediate_file_path, "./"), "root/")}"
+  external_ca_root_certificate_file_path    = startswith(var.external_ca_root_certificate_file_path, "/") ? var.external_ca_root_certificate_file_path : "${path.root}/root/${trimprefix(trimprefix(var.external_ca_root_certificate_file_path, "./"), "root/")}"
 
   pki_cluster_base_url = coalesce(var.pki_cluster_base_url, var.pki_api_base_url)
+}
+
+data "local_file" "external_ca_root_certificate" {
+  filename = local.external_ca_root_certificate_file_path
 }
 
 resource "vault_pki_secret_backend_config_urls" "pki_int" {

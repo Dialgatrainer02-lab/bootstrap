@@ -1,20 +1,10 @@
 #cloud-config
-hostname: ${hostname}
-package_update: true
-package_upgrade: false
+merge_how:
+  - name: list
+    settings: [append]
+  - name: dict
+    settings: [no_replace, recurse_list]
 
-users:
-  - name: admin
-    groups: [wheel]
-    shell: /bin/bash
-    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
-%{ if length(ssh_authorized_keys) > 0 ~}
-    ssh_authorized_keys:
-%{ for k in ssh_authorized_keys ~}
-      - ${k}
-%{ endfor ~}
-%{ endif ~}
-output: {all: '| tee -a /var/log/cloud-init-output.log'}
 packages:
   - dnf-plugins-core
   - yum-utils

@@ -1,99 +1,13 @@
 #cloud-config
-hostname: ${hostname}
-package_update: false
-package_upgrade: false
-
-users:
-  - name: admin
-    groups: [wheel]
-    shell: /bin/bash
-    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
-%{ if length(ssh_authorized_keys) > 0 ~}
-    ssh_authorized_keys:
-%{ for k in ssh_authorized_keys ~}
-      - ${k}
-%{ endfor ~}
-%{ endif ~}
-output: {all: '| tee -a /var/log/cloud-init-output.log'}
-
-ca_certs:
-  trusted:
-    - |
-${indent(6, trimspace(openbao_intermediate_ca_certificate_pem))}
-
-write_files:
-  - path: /etc/hosts
-    permissions: '0644'
-    append: true
-    content: |
-      ${openbao_service_ip} ${openbao_service_fqdn} openbao
-      ${local_mirror_service_ip} ${local_mirror_service_fqdn} local-mirror
-
-  - path: /etc/yum.repos.d/local-almalinux.repo
-    permissions: '0644'
-    content: |
-      [local-baseos]
-      name=Local AlmaLinux 10 - BaseOS
-      baseurl=${mirror_base_url}/almalinux/10/baseos
-      enabled=1
-      gpgcheck=0
-      repo_gpgcheck=0
-
-      [local-appstream]
-      name=Local AlmaLinux 10 - AppStream
-      baseurl=${mirror_base_url}/almalinux/10/appstream
-      enabled=1
-      gpgcheck=0
-      repo_gpgcheck=0
-
-      [local-extras]
-      name=Local AlmaLinux 10 - Extras
-      baseurl=${mirror_base_url}/almalinux/10/extras
-      enabled=1
-      gpgcheck=0
-      repo_gpgcheck=0
-
-      [local-crb]
-      name=Local AlmaLinux 10 - CRB
-      baseurl=${mirror_base_url}/almalinux/10/crb
-      enabled=1
-      gpgcheck=0
-      repo_gpgcheck=0
-
-  - path: /etc/yum.repos.d/local-third-party.repo
-    permissions: '0644'
-    content: |
-      [local-epel]
-      name=Local EPEL
-      baseurl=${mirror_base_url}/epel
-      enabled=1
-      gpgcheck=0
-      repo_gpgcheck=0
-
-      [local-docker-ce-stable]
-      name=Local Docker CE Stable
-      baseurl=${mirror_base_url}/docker
-      enabled=1
-      gpgcheck=0
-      repo_gpgcheck=0
-
-      [local-vector]
-      name=Local Vector
-      baseurl=${mirror_base_url}/vector
-      enabled=1
-      gpgcheck=0
-      repo_gpgcheck=0
+merge_how:
+  - name: list
+    settings: [append]
+  - name: dict
+    settings: [no_replace, recurse_list]
 
 runcmd:
   - set -euo pipefail
-  - rm -f /etc/yum.repos.d/almalinux*.repo
-  - rm -f /etc/yum.repos.d/epel*.repo
-  - rm -f /etc/yum.repos.d/docker*.repo
-  - rm -f /etc/yum.repos.d/vector*.repo
-
-  - dnf clean all
-  - dnf makecache
   - dnf install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   - systemctl enable --now docker
 
-final_message: "Local registry VM configured with internal repos, trusted OpenBao intermediate CA, and Docker installed."
+final_message: "Local registry VM configured with internal repos, trusted root CA, and Docker installed."
