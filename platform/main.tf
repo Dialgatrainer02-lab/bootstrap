@@ -21,21 +21,20 @@ provider "tls" {
 provider "local" {}
 
 provider "vault" {
-  address                = module.infra.openbao_api_address
+  address                = module.dev.openbao_api_address
   skip_tls_verify        = true
   vault_version_override = "1.13.0"
 
   auth_login_userpass {
-    username = module.infra.openbao_admin_username
-    password = module.infra.openbao_initial_admin_password
+    username = module.dev.openbao_admin_username
+    password = module.dev.openbao_initial_admin_password
   }
 }
 
-module "infra" {
-  source = "./modules/infra"
+module "dev" {
+  source = "./dev"
 
-  cluster_name = var.cluster_name
-
+  cluster_name = "dev"
   service_feature_gates = {
     local_mirror   = true
     openbao        = true

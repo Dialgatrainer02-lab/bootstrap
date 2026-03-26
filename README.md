@@ -7,6 +7,20 @@ certstrap --depot-path root init \
     --curve P-256 \
     --path-length 2 
 ```
+the signing command to generate an intermediate is
+```
+set -euo pipefail
+certstrap --depot-path root sign \
+    --CA "Example Labs Root CA v1" \
+    --intermediate \
+    --csr "$CSR_FILE" \
+    --expires "5 years" \
+    --path-length 1 \
+    --cert "$SIGNED_CERT_FILE" \
+    "Example Labs Intermediate CA v1.1"
+```
+the local mirror takes a while so apply it first
+`tofu apply -target=module.dev.module.local_mirror`
 
 ## Infrastructure Services To Complete
 

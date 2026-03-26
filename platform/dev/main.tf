@@ -42,13 +42,26 @@ locals {
   local_mirror_name   = "${var.cluster_name}-local-mirror"
   openbao_name        = "${var.cluster_name}-openbao"
   local_registry_name = "${var.cluster_name}-local-registry"
+  cluster_tag         = "cluster-${var.cluster_name}"
+
+  service_vm_common_tags = [
+    "service",
+    local.cluster_tag,
+  ]
+  local_mirror_tags = concat(local.service_vm_common_tags, ["local-mirror"])
+  openbao_tags      = concat(local.service_vm_common_tags, ["openbao"])
+  local_registry_tags = concat(local.service_vm_common_tags, [
+    "local-registry",
+  ])
+
+  vm_template_file_name = startswith(var.vm_template_file_name, "${var.cluster_name}-") ? var.vm_template_file_name : "${var.cluster_name}-${var.vm_template_file_name}"
 
   local_mirror_service_fqdn = var.service_dns_domain != null && trimspace(var.service_dns_domain) != "" ? "local-mirror.${var.service_dns_domain}" : "local-mirror"
   local_mirror_base_url     = "http://${local.local_mirror_service_fqdn}/repos/current"
 }
 
 module "snippets" {
-  source = "../datastore"
+  source = "../modules/infrastructure/datastore"
 
   name    = local.snippets_datastore_name
   path    = local.snippets_datastore_path
@@ -57,7 +70,7 @@ module "snippets" {
 }
 
 module "images" {
-  source = "../datastore"
+  source = "../modules/infrastructure/datastore"
 
   name    = local.images_datastore_name
   path    = local.images_datastore_path
@@ -70,7 +83,7 @@ resource "proxmox_virtual_environment_download_file" "vm_template" {
   datastore_id        = module.images.id
   content_type        = "iso"
   url                 = var.vm_template_url
-  file_name           = var.vm_template_file_name
+  file_name           = local.vm_template_file_name
   overwrite           = true
   overwrite_unmanaged = false
 }
@@ -85,7 +98,7 @@ resource "proxmox_virtual_environment_pool" "platform" {
 module "local_mirror" {
   for_each = local.local_mirror_enabled ? { this = true } : {}
 
-  source = "../local_mirror"
+  source = "../modules/local_mirror"
 
   name                  = local.local_mirror_name
   node_name             = local.primary_node_name
@@ -106,31 +119,27 @@ module "local_mirror" {
   ipv4_gateway          = var.service_network_gateway
   dns_servers           = null
   dns_domain            = var.service_dns_domain
-  tags                  = ["service", "local-mirror", var.cluster_name]
+  tags                  = local.local_mirror_tags
 }
 
-# resource "terraform_data" "local_mirror_health_check" {
-# count = local.local_mirror_enabled ? 1 : 0
-# 
-# triggers_replace = {
-# ip    = local.local_mirror_health_check_ip
-# path  = "/repos/current/"
-# vm_id = tostring(try(module.local_mirror["this"].vm_id, ""))
-# }
-# 
-# depends_on = [module.local_mirror]
-# 
-# provisioner "local-exec" {
-# command = <<-EOT
-# bash -lc 'for i in $$(seq 1 30); do curl -fsS "http://${local.local_mirror_health_check_ip}/repos/current/" >/dev/null && exit 0; sleep 10; done; echo "Repository health check failed: http://${local.local_mirror_health_check_ip}/repos/current/" >&2; exit 1'
-# EOT
-# }
-# }
+data "http" "local_mirror_ready" {
+  count = local.local_mirror_enabled ? 1 : 0
+
+  url = "http://${local.local_mirror_health_check_ip}/repos/current/"
+
+  retry {
+    attempts     = 50
+    min_delay_ms = 10000
+    max_delay_ms = 100000
+  }
+
+  depends_on = [module.local_mirror]
+}
 
 module "openbao" {
   for_each = local.local_mirror_enabled && local.openbao_enabled ? { this = true } : {}
 
-  source = "./openbao"
+  source = "../modules/openbao"
 
   name                  = local.openbao_name
   node_name             = local.primary_node_name
@@ -149,16 +158,18 @@ module "openbao" {
   ipv4_gateway = var.service_network_gateway
   dns_servers  = []
   dns_domain   = var.service_dns_domain
-  tags         = ["service", "openbao", var.cluster_name]
+  tags         = local.openbao_tags
 
   mirror_base_url         = local.local_mirror_base_url
   local_mirror_service_ip = local.local_mirror_ip
+
+  depends_on = [data.http.local_mirror_ready]
 }
 
 module "local_registry" {
   for_each = local.local_mirror_enabled && local.openbao_enabled && local.local_registry_enabled ? { this = true } : {}
 
-  source = "../local_registry"
+  source = "../modules/local_registry"
 
   name                  = local.local_registry_name
   node_name             = local.primary_node_name
@@ -177,10 +188,12 @@ module "local_registry" {
   ipv4_gateway = var.service_network_gateway
   dns_servers  = []
   dns_domain   = var.service_dns_domain
-  tags         = ["service", "local-registry", var.cluster_name]
+  tags         = local.local_registry_tags
 
   mirror_base_url                         = local.local_mirror_base_url
   local_mirror_service_ip                 = local.local_mirror_ip
   openbao_service_ip                      = local.openbao_ip
   openbao_intermediate_ca_certificate_pem = module.openbao["this"].intermediate_ca_certificate
+
+  depends_on = [data.http.local_mirror_ready, module.openbao]
 }

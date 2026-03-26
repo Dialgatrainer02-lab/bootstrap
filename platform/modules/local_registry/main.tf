@@ -56,7 +56,7 @@ resource "proxmox_virtual_environment_file" "cloud_init_user_data" {
 }
 
 module "vm" {
-  source = "../vm"
+  source = "../infrastructure/vm"
 
   name         = var.name
   node_name    = var.node_name

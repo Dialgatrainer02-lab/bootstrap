@@ -4,7 +4,7 @@ provider "proxmox" {
 
 run "plan_with_boot_image_id" {
   module {
-    source = "./modules/vm"
+    source = "./modules/infrastructure/vm"
   }
 
   command = plan
@@ -130,7 +130,7 @@ run "plan_with_boot_image_id" {
 
 run "plan_with_boot_image_url" {
   module {
-    source = "./modules/vm"
+    source = "./modules/infrastructure/vm"
   }
 
   command = plan
@@ -164,7 +164,7 @@ run "plan_with_boot_image_url" {
 
 run "plan_with_boot_disk_image_id" {
   module {
-    source = "./modules/vm"
+    source = "./modules/infrastructure/vm"
   }
 
   command = plan
@@ -196,7 +196,7 @@ run "plan_with_boot_disk_image_id" {
 
 run "plan_sets_stop_on_destroy_when_guest_agent_disabled" {
   module {
-    source = "./modules/vm"
+    source = "./modules/infrastructure/vm"
   }
 
   command = plan
@@ -229,7 +229,7 @@ run "plan_sets_stop_on_destroy_when_guest_agent_disabled" {
 
 run "snippets_datastore_apply" {
   module {
-    source = "./modules/datastore"
+    source = "./modules/infrastructure/datastore"
   }
 
   command = apply
@@ -244,7 +244,7 @@ run "snippets_datastore_apply" {
 
 run "basic_apply" {
   module {
-    source = "./modules/vm"
+    source = "./modules/infrastructure/vm"
   }
 
   command = apply
@@ -263,13 +263,13 @@ run "basic_apply" {
       hostname: vm-apply-1
     EOT
 
-    cpu_cores      = 1
-    cpu_type       = "host"
-    memory_mb      = 1024
-    disk_size_gb   = 10
-    network_bridge = "vmbr0"
-    ipv4_address   = "dhcp"
-    tags           = ["apply-test"]
+    cpu_cores           = 1
+    cpu_type            = "host"
+    memory_mb           = 1024
+    disk_size_gb        = 10
+    network_bridge      = "vmbr0"
+    ipv4_address        = "dhcp"
+    tags                = ["apply-test"]
     guest_agent_enabled = false
   }
 
@@ -329,23 +329,23 @@ run "boot_disk_image_prepare" {
 
 run "apply_with_boot_disk_image_id" {
   module {
-    source = "./modules/vm"
+    source = "./modules/infrastructure/vm"
   }
 
   command = apply
 
   variables {
-    name            = "vm-disk-1"
-    node_name       = "pve"
-    datastore_id    = "local-zfs"
-    boot_image_kind = "disk"
-    boot_image_id   = run.boot_disk_image_prepare.id
-    cpu_cores       = 2
-    memory_mb       = 2048
-    disk_size_gb    = 20
-    network_bridge  = "vmbr0"
-    ipv4_address    = "dhcp"
-    tags            = ["disk"]
+    name                = "vm-disk-1"
+    node_name           = "pve"
+    datastore_id        = "local-zfs"
+    boot_image_kind     = "disk"
+    boot_image_id       = run.boot_disk_image_prepare.id
+    cpu_cores           = 2
+    memory_mb           = 2048
+    disk_size_gb        = 20
+    network_bridge      = "vmbr0"
+    ipv4_address        = "dhcp"
+    tags                = ["disk"]
     guest_agent_enabled = false
   }
 
