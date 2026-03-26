@@ -1,0 +1,11 @@
+#cloud-config
+merge_how:
+  - name: list
+    settings: [append]
+  - name: dict
+    settings: [no_replace, recurse_list]
+
+ca_certs:
+  trusted:
+    - |
+${indent(6, trimspace(certificate_pem))}

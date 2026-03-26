@@ -1,13 +1,15 @@
 locals {
-  rendered_user_data = coalesce(
-    var.cloud_init_user_data,
-    templatefile("${path.module}/cloud-init.yaml.tftpl", {
-      hostname            = var.name
-      ssh_authorized_keys = local.authorized_keys
-      repo_disk_device    = var.repo_disk_device
-      repo_disk_size_gb   = var.packages_disk_size_gb
-    }),
-  )
+  base_cloud_init_fragment = templatefile("${path.module}/../shared/cloudinit/fragments/base.yaml.tftpl", {
+    hostname            = var.name
+    package_update      = true
+    package_upgrade     = false
+    ssh_authorized_keys = local.authorized_keys
+  })
+  service_cloud_init_fragment = templatefile("${path.module}/cloud-init.yaml.tftpl", {
+    repo_disk_device  = var.repo_disk_device
+    repo_disk_size_gb = var.packages_disk_size_gb
+  })
+  rendered_user_data = coalesce(var.cloud_init_user_data, try(data.cloudinit_config.user_data[0].rendered, null))
 }
 
 locals {
@@ -27,6 +29,23 @@ resource "local_sensitive_file" "local_repo_vm_ssh_private_key" {
   filename        = "${path.root}/keys/local-mirror"
   content         = tls_private_key.local_repo_vm_ssh.private_key_openssh
   file_permission = "0600"
+}
+
+data "cloudinit_config" "user_data" {
+  count = var.cloud_init_user_data == null ? 1 : 0
+
+  gzip          = false
+  base64_encode = false
+
+  part {
+    content_type = "text/cloud-config"
+    content      = local.base_cloud_init_fragment
+  }
+
+  part {
+    content_type = "text/cloud-config"
+    content      = local.service_cloud_init_fragment
+  }
 }
 
 resource "proxmox_virtual_environment_file" "cloud_init_user_data" {

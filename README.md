@@ -55,3 +55,8 @@ Current tests cover basic module behavior for `vm`, `datastore`, `local_mirror`,
 
 ### testing vault
 make a test helper module to spin up a local openbao (using  a docker image) and reset the vault provider config in the test so it uses the root token from the dev server to apply against so we dont rely on proper infra
+
+
+# waiting
+everything waits for local mirror in bootcmd in cloud init
+openbao config will wait for openbao api (on first apply will likely be held up on local mirror)

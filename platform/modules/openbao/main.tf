@@ -3,28 +3,33 @@ locals {
   openbao_api_address       = "http://${local.openbao_advertise_ip}:8200"
   openbao_service_fqdn      = var.dns_domain != null && trimspace(var.dns_domain) != "" ? "openbao.${var.dns_domain}" : "openbao"
   local_mirror_service_fqdn = var.dns_domain != null && trimspace(var.dns_domain) != "" ? "local-mirror.${var.dns_domain}" : "local-mirror"
-  openbao_service_api_url   = "http://${local.openbao_service_fqdn}:8200"
   openbao_admin_username    = "admin"
-  pki_role_allowed_domains  = var.dns_domain != null && trimspace(var.dns_domain) != "" ? [trimspace(var.dns_domain)] : ["example.com"]
 
-  rendered_user_data = coalesce(
-    var.cloud_init_user_data,
-    templatefile("${path.module}/cloud-init.yaml.tftpl", {
-      hostname                       = var.name
-      ssh_authorized_keys            = local.authorized_keys
-      mirror_base_url                = var.mirror_base_url
-      openbao_api_addr               = local.openbao_service_fqdn
-      openbao_cluster_addr           = local.openbao_service_fqdn
-      openbao_service_fqdn           = local.openbao_service_fqdn
-      openbao_service_ip             = local.openbao_advertise_ip
-      local_mirror_service_fqdn      = local.local_mirror_service_fqdn
-      local_mirror_service_ip        = var.local_mirror_service_ip
-      openbao_raft_node_id           = var.name
-      openbao_raft_data_dir          = var.openbao_raft_data_dir
-      openbao_initial_admin_password = random_password.inital_admin_password.result
-      openbao_key_0                  = random_bytes.key_0.base64
-    }),
-  )
+  base_cloud_init_fragment = templatefile("${path.module}/../shared/cloudinit/fragments/base.yaml.tftpl", {
+    hostname            = var.name
+    package_update      = false
+    package_upgrade     = false
+    ssh_authorized_keys = local.authorized_keys
+  })
+  hosts_cloud_init_fragment = templatefile("${path.module}/../shared/cloudinit/fragments/hosts-openbao-local-mirror.yaml.tftpl", {
+    openbao_service_fqdn      = local.openbao_service_fqdn
+    openbao_service_ip        = local.openbao_advertise_ip
+    local_mirror_service_fqdn = local.local_mirror_service_fqdn
+    local_mirror_service_ip   = var.local_mirror_service_ip
+  })
+  local_repos_cloud_init_fragment = templatefile("${path.module}/../shared/cloudinit/fragments/local-yum-repos.yaml.tftpl", {
+    mirror_base_url = var.mirror_base_url
+    mirror_wait_url = "http://${var.local_mirror_service_ip}/repos/current/"
+  })
+  service_cloud_init_fragment = templatefile("${path.module}/cloud-init.yaml.tftpl", {
+    openbao_api_addr               = local.openbao_service_fqdn
+    openbao_cluster_addr           = local.openbao_service_fqdn
+    openbao_raft_node_id           = var.name
+    openbao_raft_data_dir          = var.openbao_raft_data_dir
+    openbao_initial_admin_password = random_password.inital_admin_password.result
+    openbao_key_0                  = random_bytes.key_0.base64
+  })
+  rendered_user_data = coalesce(var.cloud_init_user_data, try(data.cloudinit_config.user_data[0].rendered, null))
 }
 
 locals {
@@ -53,6 +58,33 @@ resource "random_bytes" "key_0" {
   length = 32
 }
 
+data "cloudinit_config" "user_data" {
+  count = var.cloud_init_user_data == null ? 1 : 0
+
+  gzip          = false
+  base64_encode = false
+
+  part {
+    content_type = "text/cloud-config"
+    content      = local.base_cloud_init_fragment
+  }
+
+  part {
+    content_type = "text/cloud-config"
+    content      = local.hosts_cloud_init_fragment
+  }
+
+  part {
+    content_type = "text/cloud-config"
+    content      = local.local_repos_cloud_init_fragment
+  }
+
+  part {
+    content_type = "text/cloud-config"
+    content      = local.service_cloud_init_fragment
+  }
+}
+
 resource "proxmox_virtual_environment_file" "cloud_init_user_data" {
   content_type = "snippets"
   datastore_id = var.snippets_datastore_id
@@ -62,29 +94,6 @@ resource "proxmox_virtual_environment_file" "cloud_init_user_data" {
     file_name = "${var.name}-user-data.yaml"
     data      = local.rendered_user_data
   }
-}
-
-data "http" "openbao_api_ready" {
-  url = "${local.openbao_api_address}/v1/sys/health"
-
-  retry {
-    attempts     = 30
-    min_delay_ms = 10000
-    max_delay_ms = 10000
-  }
-
-  depends_on = [module.vm]
-}
-
-module "config" {
-  source = "./config"
-
-  pki_api_base_url         = local.openbao_service_api_url
-  pki_cluster_base_url     = local.openbao_service_api_url
-  pki_role_allowed_domains = local.pki_role_allowed_domains
-
-  depends_on = [data.http.openbao_api_ready]
-
 }
 
 module "vm" {

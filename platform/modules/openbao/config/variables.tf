@@ -23,6 +23,12 @@ variable "external_ca_signed_intermediate_file_path" {
   default     = "certs/external-ca.crt.pem"
 }
 
+variable "external_ca_root_certificate_file_path" {
+  type        = string
+  description = "Local file path of the external root CA certificate PEM used as trust anchor. Relative paths are resolved from path.root."
+  default     = "Example_Labs_Root_CA_v1.crt"
+}
+
 variable "pki_api_base_url" {
   type        = string
   description = "Base OpenBao API URL used for PKI AIA/CRL/OCSP URLs (for example http://192.168.0.51:8200)."
@@ -32,6 +38,12 @@ variable "pki_api_base_url" {
 variable "pki_cluster_base_url" {
   type        = string
   description = "Base OpenBao cluster API URL used for PKI cluster path config. Defaults to pki_api_base_url when null."
+  default     = null
+}
+
+variable "pki_wait_base_url" {
+  type        = string
+  description = "Base OpenBao API URL used only for readiness waiting (for example http://192.168.0.51:8200). Defaults to pki_api_base_url when null."
   default     = null
 }
 
