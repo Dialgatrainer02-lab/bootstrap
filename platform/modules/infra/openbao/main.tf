@@ -5,6 +5,7 @@ locals {
   local_mirror_service_fqdn = var.dns_domain != null && trimspace(var.dns_domain) != "" ? "local-mirror.${var.dns_domain}" : "local-mirror"
   openbao_service_api_url   = "http://${local.openbao_service_fqdn}:8200"
   openbao_admin_username    = "admin"
+  pki_role_allowed_domains  = var.dns_domain != null && trimspace(var.dns_domain) != "" ? [trimspace(var.dns_domain)] : ["example.com"]
 
   rendered_user_data = coalesce(
     var.cloud_init_user_data,
@@ -78,8 +79,9 @@ data "http" "openbao_api_ready" {
 module "config" {
   source = "./config"
 
-  pki_api_base_url     = local.openbao_service_api_url
-  pki_cluster_base_url = local.openbao_service_api_url
+  pki_api_base_url         = local.openbao_service_api_url
+  pki_cluster_base_url     = local.openbao_service_api_url
+  pki_role_allowed_domains = local.pki_role_allowed_domains
 
   depends_on = [data.http.openbao_api_ready]
 
