@@ -3,6 +3,7 @@ locals {
   use_boot_image_url   = var.boot_image_url != null
   use_boot_image_id    = var.boot_image_id != null
   boot_image_file_id   = coalesce(var.boot_image_id, try(proxmox_virtual_environment_download_file.boot[0].id, null))
+  stop_on_destroy      = coalesce(var.stop_on_destroy, !var.guest_agent_enabled)
 
   cloud_init_snippets_datastore_id = var.cloud_init_snippets_datastore_id
   cloud_init_user_data_file_id = try(coalesce(
@@ -124,11 +125,12 @@ resource "proxmox_virtual_environment_download_file" "boot" {
 }
 
 resource "proxmox_virtual_environment_vm" "this" {
-  name      = var.name
-  node_name = var.node_name
-  vm_id     = var.vm_id
-  pool_id   = var.pool_id
-  tags      = var.tags
+  name            = var.name
+  node_name       = var.node_name
+  vm_id           = var.vm_id
+  pool_id         = var.pool_id
+  tags            = var.tags
+  stop_on_destroy = local.stop_on_destroy
 
   machine = var.machine
   bios    = var.bios

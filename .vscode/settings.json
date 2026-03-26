@@ -1,4 +1,23 @@
 {
   "terraform.mcp.server.enable": true,
   "yaml.schemaStore.enable": true,
+  "[opentofu][opentofu-vars]": {
+    "editor.defaultFormatter": "opentofu.vscode-opentofu",
+    "editor.formatOnSave": true,
+    "editor.formatOnSaveMode": "file"
+  },
+  "files.associations": {
+    "*.tftest.hcl": "opentofu-test"
+  },
+  "terminal.integrated.profiles.linux": {
+    "bash (workspace .env)": {
+      "path": "bash",
+      "args": [
+        "--rcfile",
+        "${workspaceFolder}/.vscode/terminal-env-setup.sh",
+        "-i"
+      ]
+    }
+  },
+  "terminal.integrated.defaultProfile.linux": "bash (workspace .env)"
 }
