@@ -116,7 +116,7 @@ module "local_mirror" {
   cpu_cores             = 2
   cpu_type              = "host"
   cpu_flags             = []
-  memory_mb             = 4096
+  memory_mb             = 8192
   disk_size_gb          = 20
   packages_disk_size_gb = 100
   repo_disk_device      = null
