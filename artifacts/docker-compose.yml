@@ -1,0 +1,16 @@
+name: <your project name>
+services:
+    local-mirror:
+        build:
+          context: ./mirror
+        # user: "1000"
+        environment:
+            - MAX_PARALLEL=8
+            - ENABLE_SBOM=true
+            - RELEASEVER=10
+            - EXTRA_REPOS=docker-ce-stable vector
+        volumes:
+            - ./output:/sync/output
+            # - ./mirror/reposync.sh:/sync/reposync.sh
+            - ./mirror/custom:/custom
+        restart: no
