@@ -247,6 +247,23 @@ variable "extra_disks" {
   default     = []
 }
 
+variable "virtiofs" {
+  type = object({
+    mapping      = string
+    cache        = optional(string)
+    direct_io    = optional(bool, false)
+    expose_acl   = optional(bool)
+    expose_xattr = optional(bool, true)
+  })
+  description = "Optional virtiofs shared directory mapping configuration. direct_io defaults to false and expose_xattr defaults to true."
+  default     = null
+
+  validation {
+    condition     = var.virtiofs == null ? true : try(var.virtiofs.cache == null || contains(["always", "auto", "metadata", "never"], var.virtiofs.cache), false)
+    error_message = "virtiofs.cache must be one of: always, auto, metadata, never."
+  }
+}
+
 variable "network_bridge" {
   type        = string
   description = "Bridge name for the primary network device."

@@ -9,12 +9,17 @@ locals {
   default_images_datastore_name = "${var.cluster_name}-images"
   default_images_datastore_path = "/var/lib/${var.cluster_name}-images"
 
+  default_artifacts_datastore_name = "${var.cluster_name}-artifacts"
+  default_artifacts_datastore_path = "/var/lib/${var.cluster_name}-artifacts"
+
   snippets_datastore_name = coalesce(var.snippets_datastore_name, local.default_snippets_datastore_name)
   snippets_datastore_path = coalesce(var.snippets_datastore_path, local.default_snippets_datastore_path)
 
-  images_datastore_name = coalesce(var.images_datastore_name, local.default_images_datastore_name)
-  images_datastore_path = coalesce(var.images_datastore_path, local.default_images_datastore_path)
-  resource_pool_name    = coalesce(var.resource_pool_name, "${var.cluster_name}-pool")
+  images_datastore_name    = coalesce(var.images_datastore_name, local.default_images_datastore_name)
+  images_datastore_path    = coalesce(var.images_datastore_path, local.default_images_datastore_path)
+  artifacts_datastore_name = coalesce(var.artifacts_datastore_name, local.default_artifacts_datastore_name)
+  artifacts_datastore_path = coalesce(var.artifacts_datastore_path, local.default_artifacts_datastore_path)
+  resource_pool_name       = coalesce(var.resource_pool_name, "${var.cluster_name}-pool")
 
   primary_node_name = data.proxmox_virtual_environment_nodes.discovered.names[1]
 
@@ -54,10 +59,11 @@ locals {
     "local-registry",
   ])
 
-  vm_template_file_name = startswith(var.vm_template_file_name, "${var.cluster_name}-") ? var.vm_template_file_name : "${var.cluster_name}-${var.vm_template_file_name}"
+  vm_template_file_name                = startswith(var.vm_template_file_name, "${var.cluster_name}-") ? var.vm_template_file_name : "${var.cluster_name}-${var.vm_template_file_name}"
+  local_mirror_repos_archive_file_name = var.local_mirror_repos_archive_path != null && trimspace(var.local_mirror_repos_archive_path) != "" ? basename(var.local_mirror_repos_archive_path) : "almalinux-repos.tar.gz"
 
   local_mirror_service_fqdn = var.service_dns_domain != null && trimspace(var.service_dns_domain) != "" ? "local-mirror.${var.service_dns_domain}" : "local-mirror"
-  local_mirror_base_url     = "http://${local.local_mirror_service_fqdn}/repos/current"
+  local_mirror_base_url     = "http://${local.local_mirror_service_fqdn}/repos"
   openbao_service_fqdn      = var.service_dns_domain != null && trimspace(var.service_dns_domain) != "" ? "openbao.${var.service_dns_domain}" : "openbao"
   openbao_service_api_url   = "http://${local.openbao_service_fqdn}:8200"
   pki_role_allowed_domains  = var.service_dns_domain != null && trimspace(var.service_dns_domain) != "" ? [trimspace(var.service_dns_domain)] : ["example.com"]
@@ -68,19 +74,31 @@ locals {
 module "snippets" {
   source = "../modules/infrastructure/datastore"
 
-  name    = local.snippets_datastore_name
-  path    = local.snippets_datastore_path
-  pool_id = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
-  content = ["snippets"]
+  name           = local.snippets_datastore_name
+  path           = local.snippets_datastore_path
+  attach_to_pool = local.resource_pool_name != null
+  pool_id        = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
+  content        = ["snippets"]
 }
 
 module "images" {
   source = "../modules/infrastructure/datastore"
 
-  name    = local.images_datastore_name
-  path    = local.images_datastore_path
-  content = ["import", "iso", "images", "vztmpl"]
-  pool_id = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
+  name           = local.images_datastore_name
+  path           = local.images_datastore_path
+  content        = ["import", "iso", "images", "vztmpl"]
+  attach_to_pool = local.resource_pool_name != null
+  pool_id        = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
+}
+
+module "artifacts" {
+  source = "../modules/infrastructure/datastore"
+
+  name           = local.artifacts_datastore_name
+  path           = local.artifacts_datastore_path
+  content        = ["snippets"]
+  attach_to_pool = local.resource_pool_name != null
+  pool_id        = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
 }
 
 resource "proxmox_virtual_environment_download_file" "vm_template" {
@@ -105,26 +123,31 @@ module "local_mirror" {
 
   source = "../modules/local_mirror"
 
-  name                  = local.local_mirror_name
-  node_name             = local.primary_node_name
-  datastore_id          = module.images.id
-  pool_id               = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
-  snippets_datastore_id = module.snippets.id
-  boot_image_id         = proxmox_virtual_environment_download_file.vm_template.id
-  boot_image_kind       = "disk"
+  name                   = local.local_mirror_name
+  node_name              = local.primary_node_name
+  datastore_id           = module.images.id
+  pool_id                = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
+  snippets_datastore_id  = module.snippets.id
+  artifacts_datastore_id = module.artifacts.id
+  boot_image_id          = proxmox_virtual_environment_download_file.vm_template.id
+  boot_image_kind        = "disk"
 
-  cpu_cores             = 2
-  cpu_type              = "host"
-  cpu_flags             = []
-  memory_mb             = 8192
-  disk_size_gb          = 20
-  packages_disk_size_gb = 100
-  repo_disk_device      = null
-  ipv4_address          = local.local_mirror_ipv4_address
-  ipv4_gateway          = var.service_network_gateway
-  dns_servers           = null
-  dns_domain            = var.service_dns_domain
-  tags                  = local.local_mirror_tags
+  cpu_cores                 = 2
+  cpu_type                  = "host"
+  cpu_flags                 = []
+  memory_mb                 = 8192
+  disk_size_gb              = 20
+  packages_disk_size_gb     = 100
+  repo_disk_device          = null
+  ipv4_address              = local.local_mirror_ipv4_address
+  ipv4_gateway              = var.service_network_gateway
+  dns_servers               = null
+  dns_domain                = var.service_dns_domain
+  tags                      = local.local_mirror_tags
+  virtiofs_dir_mapping_name = "artifacts"
+  virtiofs_dir_mapping_path = module.artifacts.path
+  repos_archive_file_name   = local.local_mirror_repos_archive_file_name
+  repos_archive_source_path = var.local_mirror_repos_archive_path
 }
 
 module "openbao" {

@@ -70,6 +70,7 @@ sync_repo() {
 			--download-metadata \
 			--download-path="$REPO_DIR" \
 			--newest-only \
+			--exclude="*-devel" \
 			--delete
 
 		echo "-------------------------------------"
@@ -101,6 +102,9 @@ fi
 echo "🔄 Parallel syncing..."
 # shellcheck disable=SC2086
 printf "%s\n" $ALL_REPOS | parallel -j "$MAX_PARALLEL" sync_repo {}
+
+
+
 
 # =========================
 # SBOM Generation (optional)

@@ -27,6 +27,18 @@ variable "images_datastore_path" {
   default     = null
 }
 
+variable "artifacts_datastore_name" {
+  type        = string
+  description = "Proxmox storage ID for the shared artifacts datastore."
+  default     = null
+}
+
+variable "artifacts_datastore_path" {
+  type        = string
+  description = "Filesystem path for the shared artifacts datastore."
+  default     = "/var/lib/artifacts"
+}
+
 variable "resource_pool_name" {
   type        = string
   description = "Proxmox resource pool ID used to group resources created by this module."
@@ -49,6 +61,12 @@ variable "vm_template_file_name" {
   type        = string
   description = "File name for the downloaded VM template/boot image."
   default     = "AlmaLinux-10-GenericCloud-latest.x86_64.qcow2.img"
+}
+
+variable "local_mirror_repos_archive_path" {
+  type        = string
+  description = "Local filesystem path to the prebuilt local mirror archive produced by artifacts/mirror/reposync.sh."
+  default     = null
 }
 
 variable "service_feature_gates" {

@@ -3,14 +3,52 @@ services:
     local-mirror:
         build:
           context: ./mirror
-        # user: "1000"
         environment:
             - MAX_PARALLEL=8
             - ENABLE_SBOM=true
             - RELEASEVER=10
             - EXTRA_REPOS=docker-ce-stable vector
         volumes:
-            - ./output:/sync/output
+            - ./output/mirror:/sync/output
             # - ./mirror/reposync.sh:/sync/reposync.sh
             - ./mirror/custom:/custom
         restart: no
+    oci-bundler:
+        build:
+            context: ./registry
+            dockerfile: Dockerfile
+    
+        container_name: oci-bundler
+        working_dir: /data
+    
+        volumes:
+        # Input file (read-only)
+        - ./registry/images.txt:/data/images.txt:ro
+    
+        # Output directory
+        - ./output/registry:/data/output
+    
+        # Optional: Docker auth for private registries
+        - ~/.docker:/root/.docker:ro
+    
+        environment:
+            # Platform
+            ARCH: amd64
+            OS: linux
+        
+            # Parallelism
+            PARALLEL_COPY: 4
+            PARALLEL_SBOM: 2
+        
+            # Feature gates (all enabled)
+            ENABLE_COPY: "true"
+            ENABLE_SBOM: "true"
+            ENABLE_REFERRERS: "true"
+            ENABLE_OCI_ARTIFACTS: "true"
+        
+        command:
+        - /data/images.txt
+        - /data/output
+        - /data/bundle.tar
+    
+        restart: "no"
