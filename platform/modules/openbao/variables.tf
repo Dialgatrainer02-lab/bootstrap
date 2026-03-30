@@ -126,7 +126,7 @@ variable "tags" {
 
 variable "mirror_base_url" {
   type        = string
-  description = "Base URL for mirrored repositories, typically ending with /repos/current."
+  description = "Base URL for mirrored repositories, typically ending with /repos."
 }
 
 variable "local_mirror_service_ip" {

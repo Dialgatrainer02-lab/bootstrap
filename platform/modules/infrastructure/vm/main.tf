@@ -18,8 +18,10 @@ locals {
     var.cloud_init_network_data_file_id,
     try(proxmox_virtual_environment_file.cloud_init_network_data[0].id, null),
   ), null)
-  dns_servers         = coalesce(var.dns_servers, [])
-  ssh_authorized_keys = coalesce(var.ssh_authorized_keys, [])
+  dns_servers           = coalesce(var.dns_servers, [])
+  ssh_authorized_keys   = coalesce(var.ssh_authorized_keys, [])
+  virtiofs_direct_io    = coalesce(try(var.virtiofs.direct_io, null), false)
+  virtiofs_expose_xattr = coalesce(try(var.virtiofs.expose_xattr, null), true)
 
   use_external_user_data    = local.cloud_init_user_data_file_id != null || var.cloud_init_user_data != null
   use_external_network_data = local.cloud_init_network_data_file_id != null || var.cloud_init_network_data != null
@@ -190,6 +192,17 @@ resource "proxmox_virtual_environment_vm" "this" {
       vlan_id     = try(network_device.value.vlan_id, null)
       mac_address = try(network_device.value.mac_address, null)
       firewall    = try(network_device.value.firewall, null)
+    }
+  }
+
+  dynamic "virtiofs" {
+    for_each = var.virtiofs == null ? [] : [var.virtiofs]
+    content {
+      mapping      = virtiofs.value.mapping
+      cache        = try(virtiofs.value.cache, null)
+      direct_io    = local.virtiofs_direct_io
+      expose_acl   = try(virtiofs.value.expose_acl, null)
+      expose_xattr = local.virtiofs_expose_xattr
     }
   }
 

@@ -40,11 +40,12 @@ module "dev" {
     openbao        = true
     local_registry = false
   }
+  resource_pool_name = "dev-pool"
 
-  service_network_subnet_cidr = "192.168.0.0/24"
-  service_network_gateway     = "192.168.0.1"
-  service_dns_domain          = var.service_dns_domain
-
+  service_network_subnet_cidr     = "192.168.0.0/24"
+  service_network_gateway         = "192.168.0.1"
+  service_dns_domain              = var.service_dns_domain
+  local_mirror_repos_archive_path = var.local_mirror_repos_archive_path
   providers = {
     proxmox   = proxmox
     talos     = talos

@@ -6,207 +6,67 @@ merge_how:
     settings: [no_replace, recurse_list]
 
 packages:
-  - dnf-plugins-core
-  - yum-utils
-  - createrepo_c
   - nginx
-
-# changw to one $ 
-# disk_setup:
-  # $${drive_path}:
-    # table_type: 'gpt'
-    # layout: 
-      # - 100
-# fs_setup:
-  # - label: repos
-    # filesystem: ext4
-    # device: $${drive_path}
-    # partition: none
-    # overwrite: false
-# 
-# mounts:
-  # - [ "LABEL=repos", "/var/www/html/repos", "ext4", "defaults,nofail,umask=0", "0", "2" ]
-# 
+  - tar
 
 write_files:
-  - path: /usr/local/bin/setup-repo-disk.sh
+  - path: /usr/local/bin/setup-repos-from-artifacts.sh
     permissions: '0755'
     content: |
       #!/bin/bash
       set -euo pipefail
 
-      TARGET_MOUNT="/var/www/html/repos"
-      TARGET_SIZE_GB=${repo_disk_size_gb}
-      TARGET_DEVICE="%{ if repo_disk_device != null }${repo_disk_device}%{ endif }"
-      TARGET_SIZE_BYTES_DEC=$((TARGET_SIZE_GB * 1000 * 1000 * 1000))
-      TARGET_SIZE_BYTES_BIN=$((TARGET_SIZE_GB * 1024 * 1024 * 1024))
-      TOLERANCE_BYTES=$((2 * 1024 * 1024 * 1024))
+      VIRTIOFS_TAG="${virtiofs_mapping_name}"
+      ARTIFACTS_MOUNT="/mnt/artifacts"
+      ARCHIVE_NAME="${repos_archive_file_name}"
+      WEB_ROOT="/var/www/html"
+      REPOS_DIR="$WEB_ROOT/repos"
+      STAGING_DIR="/var/tmp/local-mirror-staging"
 
-      if [ -z "$TARGET_DEVICE" ]; then
-        TARGET_DEVICE=$(blkid -L repos || true)
+      mkdir -p "$ARTIFACTS_MOUNT" "$WEB_ROOT"
+
+      if ! grep -qE "^[^#].*[[:space:]]$ARTIFACTS_MOUNT[[:space:]]virtiofs[[:space:]]" /etc/fstab; then
+        echo "$VIRTIOFS_TAG $ARTIFACTS_MOUNT virtiofs defaults,nofail,_netdev 0 0" >> /etc/fstab
       fi
 
-      if [ -z "$TARGET_DEVICE" ]; then
-        ROOT_SOURCE=$(findmnt -n -o SOURCE / || true)
-        ROOT_PARENT=$(lsblk -no PKNAME "$ROOT_SOURCE" 2>/dev/null || true)
-        ROOT_NAME=$(lsblk -no NAME "$ROOT_SOURCE" 2>/dev/null || true)
-        BEST_DEVICE=""
-        BEST_DIFF=""
-
-        while read -r dev_name dev_size dev_type; do
-          [ "$dev_type" = "disk" ] || continue
-          if [ -n "$ROOT_PARENT" ] && [ "$dev_name" = "$ROOT_PARENT" ]; then
-            continue
-          fi
-          if [ -n "$ROOT_NAME" ] && [ "$dev_name" = "$ROOT_NAME" ]; then
-            continue
-          fi
-
-          if [ "$dev_size" -ge "$TARGET_SIZE_BYTES_DEC" ]; then
-            diff_dec=$((dev_size - TARGET_SIZE_BYTES_DEC))
-          else
-            diff_dec=$((TARGET_SIZE_BYTES_DEC - dev_size))
-          fi
-
-          if [ "$dev_size" -ge "$TARGET_SIZE_BYTES_BIN" ]; then
-            diff_bin=$((dev_size - TARGET_SIZE_BYTES_BIN))
-          else
-            diff_bin=$((TARGET_SIZE_BYTES_BIN - dev_size))
-          fi
-
-          diff=$diff_dec
-          if [ "$diff_bin" -lt "$diff_dec" ]; then
-            diff=$diff_bin
-          fi
-
-          if [ "$diff" -le "$TOLERANCE_BYTES" ]; then
-            if [ -z "$BEST_DIFF" ] || [ "$diff" -lt "$BEST_DIFF" ]; then
-              BEST_DIFF="$diff"
-              BEST_DEVICE="/dev/$dev_name"
-            fi
-          fi
-        done < <(lsblk -b -dn -o NAME,SIZE,TYPE)
-
-        TARGET_DEVICE="$BEST_DEVICE"
+      if ! mountpoint -q "$ARTIFACTS_MOUNT"; then
+        mount "$ARTIFACTS_MOUNT"
       fi
 
-      if [ -z "$TARGET_DEVICE" ]; then
-        echo "No matching repo disk found for ${repo_disk_size_gb}GB target."
-        lsblk -b -dn -o NAME,SIZE,TYPE
+      ARCHIVE_PATH=""
+      for candidate in \
+        "$ARTIFACTS_MOUNT/$ARCHIVE_NAME" \
+        "$ARTIFACTS_MOUNT/snippets/$ARCHIVE_NAME" \
+        "$ARTIFACTS_MOUNT/template/iso/$ARCHIVE_NAME"; do
+        if [ -f "$candidate" ]; then
+          ARCHIVE_PATH="$candidate"
+          break
+        fi
+      done
+
+      if [ -z "$ARCHIVE_PATH" ]; then
+        echo "Expected repository archive not found. Looked for $ARCHIVE_NAME in root/snippets/template/iso."
+        ls -la "$ARTIFACTS_MOUNT" || true
         exit 1
       fi
 
-      if ! blkid "$TARGET_DEVICE" >/dev/null 2>&1; then
-        mkfs.ext4 -F -L repos "$TARGET_DEVICE"
+      rm -rf "$STAGING_DIR"
+      mkdir -p "$STAGING_DIR"
+      tar -xzf "$ARCHIVE_PATH" -C "$STAGING_DIR"
+
+      rm -rf "$REPOS_DIR"
+      if [ -d "$STAGING_DIR/repos" ]; then
+        cp -a "$STAGING_DIR/repos" "$WEB_ROOT/"
+      else
+        mkdir -p "$REPOS_DIR"
+        cp -a "$STAGING_DIR/." "$REPOS_DIR/"
       fi
 
-      mkdir -p "$TARGET_MOUNT"
-      UUID=$(blkid -s UUID -o value "$TARGET_DEVICE")
-
-      sed -i "\| $TARGET_MOUNT |d" /etc/fstab
-      echo "UUID=$UUID $TARGET_MOUNT ext4 defaults,nofail,context=system_u:object_r:httpd_sys_content_t:s0 0 2" >> /etc/fstab
-
-      mount -a
-      chmod 0755 /var/www /var/www/html "$TARGET_MOUNT"
+      chmod 0755 /var/www /var/www/html "$REPOS_DIR"
+      chown nginx:nginx -R "$REPOS_DIR"
       if command -v restorecon >/dev/null 2>&1; then
-        restorecon -RF "$TARGET_MOUNT" || true
+        restorecon -RF "$REPOS_DIR" || true
       fi
-
-  - path: /usr/local/bin/sync-repos.sh
-    permissions: '0755'
-    content: |
-      #!/bin/bash
-      set -euo pipefail
-
-      BASE_DIR="/var/www/html/repos"
-      SNAPSHOT_DATE=$(date +%F)
-
-      SNAPSHOT_DIR="$BASE_DIR/snapshots/$SNAPSHOT_DATE"
-      CURRENT_LINK="$BASE_DIR/current"
-
-      mkdir -p "$SNAPSHOT_DIR"
-      chmod +755 -R  "$BASE_DIR"
-      chown nginx:nginx -R "$BASE_DIR"
-      
-
-      echo "=== Creating snapshot: $SNAPSHOT_DATE ==="
-
-      # Repo layout
-      ALMA_DIR="$SNAPSHOT_DIR/almalinux/10"
-      EPEL_DIR="$SNAPSHOT_DIR/epel"
-      DOCKER_DIR="$SNAPSHOT_DIR/docker"
-      VECTOR_DIR="$SNAPSHOT_DIR/vector"
-
-      mkdir -p "$ALMA_DIR" "$EPEL_DIR" "$DOCKER_DIR" "$VECTOR_DIR"
-
-      echo "=== Syncing AlmaLinux 10 ==="
-      alma_repos=(baseos appstream extras crb)
-      for repo in "$${alma_repos[@]}"; do
-        reposync \
-          --repoid="$repo" \
-          --download-metadata \
-          --downloadcomps \
-          --delete \
-          --norepopath \
-          --arch=x86_64 \
-          --newest-only \
-          -p "$ALMA_DIR/$repo"
-
-        createrepo_c "$ALMA_DIR/$repo"
-      done
-
-      repos_to_sync=(
-        "epel:$EPEL_DIR"
-        "docker-ce-stable:$DOCKER_DIR"
-        "vector:$VECTOR_DIR"
-      )
-      for repo_mapping in "$${repos_to_sync[@]}"; do
-        repo_id=$${repo_mapping%%:*}
-        repo_dir=$${repo_mapping#*:}
-
-        echo "=== Syncing $${repo_id} ==="
-        reposync \
-          --repoid="$repo_id" \
-          --download-metadata \
-          --delete \
-          --norepopath \
-          --arch=x86_64 \
-          --newest-only \
-          -p "$repo_dir"
-        createrepo_c "$repo_dir"
-      done
-
-      chmod +755 -R  "$BASE_DIR"
-      chown nginx:nginx -R "$BASE_DIR"
-
-      echo "=== Updating current symlink ==="
-      ln -sfn "$SNAPSHOT_DIR" "$CURRENT_LINK"
-
-      echo "=== Cleanup old snapshots (keep last 7) ==="
-      ls -dt $BASE_DIR/snapshots/* | tail -n +8 | xargs -r rm -rf
-
-  - path: /etc/systemd/system/reposync.service
-    permissions: '0644'
-    content: |
-      [Unit]
-      Description=Sync internal repository mirror
-
-      [Service]
-      Type=oneshot
-      ExecStart=/usr/local/bin/sync-repos.sh
-
-  - path: /etc/systemd/system/reposync.timer
-    permissions: '0644'
-    content: |
-      [Unit]
-      Description=Daily repo sync
-
-      [Timer]
-      OnCalendar=*-*-* 02:00:00
-      Persistent=true
-
-      [Install]
-      WantedBy=timers.target
 
   - path: /etc/nginx/conf.d/repos.conf
     permissions: '0644'
@@ -222,49 +82,16 @@ write_files:
           }
           disable_symlinks off;
       }
-  - path: /etc/yum.repos.d/vector.repo
-    permissions: '0644'
-    content: |
-      [vector]
-      name=Vector
-      baseurl=https://yum.vector.dev/stable/vector-0/$basearch/
-      enabled=1
-      gpgcheck=1
-      repo_gpgcheck=1
-      gpgkey=https://keys.datadoghq.com/DATADOG_RPM_KEY_CURRENT.public 
-            https://keys.datadoghq.com/DATADOG_RPM_KEY_B01082D3.public
-            https://keys.datadoghq.com/DATADOG_RPM_KEY_FD4BF915.public
-            https://keys.datadoghq.com/DATADOG_RPM_KEY_E09422B3.public
 
 runcmd:
-  - set -meuo pipefail
-  # Enable base repos
-  - dnf config-manager --set-enabled baseos appstream extras crb
-  - dnf config-manager --set-enabled vector
-
-  # Enable EPEL repo for mirroring
-  - dnf install -y epel-release
-
-  # Add upstream third-party repos (for mirroring only)
-  - dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-  - dnf config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
-
-  # Format and mount repo disk
-  - /usr/local/bin/setup-repo-disk.sh
-
-  # Initial sync
-  - /usr/local/bin/sync-repos.sh
-
-  # Enable services
+  - /usr/local/bin/setup-repos-from-artifacts.sh
   - systemctl daemon-reexec
   - systemctl enable --now nginx
-  - systemctl enable --now reposync.timer
 
-  # Firewall (optional)
   - |
     if systemctl is-active --quiet firewalld; then
       firewall-cmd --permanent --add-service=http
       firewall-cmd --reload
     fi
 
-final_message: "Mirror ready with snapshots and systemd timer. Use /repos/current/ for clients."
+final_message: "Mirror ready from virtiofs artifacts archive. Use /repos/ for clients."

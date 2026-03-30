@@ -23,6 +23,11 @@ output "images_datastore_id" {
   value       = module.images.id
 }
 
+output "artifacts_datastore_id" {
+  description = "Storage ID for the shared artifacts datastore."
+  value       = module.artifacts.id
+}
+
 output "resource_pool_id" {
   description = "Proxmox resource pool ID used to group platform resources."
   value       = try(proxmox_virtual_environment_pool.platform[0].pool_id, null)
@@ -30,12 +35,17 @@ output "resource_pool_id" {
 
 output "local_mirror_health_check_url" {
   description = "HTTP URL used by the local mirror VM health check."
-  value       = local.local_mirror_enabled ? "http://${local.local_mirror_health_check_ip}/repos/current/" : null
+  value       = local.local_mirror_enabled ? "http://${local.local_mirror_health_check_ip}/repos/" : null
 }
 
 output "vm_template_file_id" {
   description = "Proxmox file id of the downloaded VM template/boot image."
   value       = proxmox_virtual_environment_download_file.vm_template.id
+}
+
+output "local_mirror_repos_archive_file_id" {
+  description = "Proxmox file id of the uploaded local mirror repository archive."
+  value       = try(module.local_mirror["this"].repos_archive_file_id, null)
 }
 
 output "local_mirror_id" {

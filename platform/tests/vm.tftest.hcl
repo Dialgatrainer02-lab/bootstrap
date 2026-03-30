@@ -37,6 +37,13 @@ run "plan_with_boot_image_id" {
     ssh_authorized_keys              = ["ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMockKeyForTests user@host"]
     user_password                    = "test-password"
     tags                             = ["test"]
+    virtiofs = {
+      mapping      = "repo-share"
+      cache        = "always"
+      direct_io    = true
+      expose_acl   = true
+      expose_xattr = true
+    }
 
     extra_disks = [
       {
@@ -120,6 +127,21 @@ run "plan_with_boot_image_id" {
   assert {
     condition     = proxmox_virtual_environment_vm.this.network_device[1].vlan_id == 100
     error_message = "Expected vlan_id to pass through to the second network device."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.virtiofs[0].mapping == "repo-share"
+    error_message = "Expected virtiofs mapping to pass through to the VM."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.virtiofs[0].cache == "always"
+    error_message = "Expected virtiofs cache policy to pass through to the VM."
+  }
+
+  assert {
+    condition     = proxmox_virtual_environment_vm.this.virtiofs[0].direct_io == true
+    error_message = "Expected virtiofs direct_io to pass through to the VM."
   }
 
   assert {

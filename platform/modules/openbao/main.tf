@@ -19,7 +19,7 @@ locals {
   })
   local_repos_cloud_init_fragment = templatefile("${path.module}/../shared/cloudinit/fragments/local-yum-repos.yaml.tftpl", {
     mirror_base_url = var.mirror_base_url
-    mirror_wait_url = "http://${var.local_mirror_service_ip}/repos/current/"
+    mirror_wait_url = "http://${var.local_mirror_service_ip}/repos/"
   })
   service_cloud_init_fragment = templatefile("${path.module}/cloud-init.yaml.tftpl", {
     openbao_api_addr               = local.openbao_service_fqdn

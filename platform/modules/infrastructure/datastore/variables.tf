@@ -18,6 +18,12 @@ variable "pool_id" {
   type    = string
   default = null
 }
+
+variable "attach_to_pool" {
+  type        = bool
+  description = "Whether to attach this datastore to a Proxmox resource pool."
+  default     = true
+}
 variable "path" {
   type        = string
   description = "Filesystem path for the directory storage."

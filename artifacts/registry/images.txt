@@ -1,0 +1,7 @@
+ghcr.io/siderolabs/installer:v1.12.6
+ghcr.io/siderolabs/installer-base:v1.12.6
+ghcr.io/siderolabs/imager:v1.12.6
+ghcr.io/siderolabs/talos:v1.12.6
+ghcr.io/siderolabs/talosctl-all:v1.12.6
+ghcr.io/siderolabs/overlays:v1.12.6
+ghcr.io/siderolabs/extensions:v1.12.6

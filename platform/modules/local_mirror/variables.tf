@@ -18,6 +18,11 @@ variable "snippets_datastore_id" {
   description = "Datastore to store cloud-init snippets (content_type=snippets). Typically provided by the infra module."
 }
 
+variable "artifacts_datastore_id" {
+  type        = string
+  description = "Datastore to store local mirror artifacts (content_type=snippets)."
+}
+
 variable "boot_image_id" {
   type        = string
   description = "Boot image/template file id to use for the VM (typically downloaded by the infra module)."
@@ -85,6 +90,62 @@ variable "packages_disk_size_gb" {
 variable "repo_disk_device" {
   type        = string
   description = "Optional explicit block device path to format/mount for repo storage (for example /dev/sdb). If unset, the disk is selected by packages_disk_size_gb."
+  default     = null
+}
+
+variable "repos_archive_file_name" {
+  type        = string
+  description = "File name of the prebuilt mirror archive exposed via virtiofs."
+  default     = "almalinux-repos.tar.gz"
+
+  validation {
+    condition     = trimspace(var.repos_archive_file_name) != ""
+    error_message = "repos_archive_file_name must not be empty."
+  }
+}
+
+variable "repos_archive_source_path" {
+  type        = string
+  description = "Local filesystem path to the prebuilt mirror archive to upload to the artifacts datastore."
+
+  validation {
+    condition     = trimspace(var.repos_archive_source_path) != ""
+    error_message = "repos_archive_source_path must not be empty."
+  }
+}
+
+variable "virtiofs" {
+  type = object({
+    mapping      = string
+    cache        = optional(string)
+    direct_io    = optional(bool, false)
+    expose_acl   = optional(bool)
+    expose_xattr = optional(bool, true)
+  })
+  description = "Optional virtiofs shared directory mapping configuration to pass to the VM. direct_io defaults to false and expose_xattr defaults to true."
+  default     = null
+
+  validation {
+    condition     = var.virtiofs == null ? true : try(var.virtiofs.cache == null || contains(["always", "auto", "metadata", "never"], var.virtiofs.cache), false)
+    error_message = "virtiofs.cache must be one of: always, auto, metadata, never."
+  }
+}
+
+variable "virtiofs_dir_mapping_name" {
+  type        = string
+  description = "Optional explicit name for the Proxmox directory hardware mapping. Defaults to <name>-virtiofs when virtiofs is enabled."
+  default     = null
+}
+
+variable "virtiofs_dir_mapping_path" {
+  type        = string
+  description = "Optional host path for the directory mapping. Defaults to /mnt/pve/<mapping-name> when virtiofs is enabled."
+  default     = null
+}
+
+variable "virtiofs_dir_mapping_comment" {
+  type        = string
+  description = "Optional comment for the Proxmox directory hardware mapping."
   default     = null
 }
 
